@@ -5,7 +5,7 @@
 # the cog project is free software under 3-clause BSD licence
 # see the LICENCE file in the project root for copying terms
 
-# miscellaneous utility functions, mostly borrowed
+# miscellaneous utility functions, some of them borrowed
 
 import os
 import pwd
@@ -14,9 +14,45 @@ import random
 import keyring
 import getpass
 
+from functools import wraps
 from passlib.hash import sha512_crypt
 
 
+# encoding conversion functions
+def to_utf8(obj):
+    """
+    Convert non-utf-8 bytestream or unicode string to utf-8 bytestream.
+    """
+    local_encoding = sys.stdin.encoding
+    if isinstance(obj, unicode):
+        obj = obj.encode('utf-8')
+    elif isinstance(obj, basestring) and local_encoding != 'utf-8':
+        obj = obj.decode(local_encoding).encode('utf-8')
+    return obj
+
+
+def to_unicode(obj, encoding='utf-8'):
+    """
+    Convert bytestream to unicode.
+    """
+    if isinstance(obj, basestring):
+        if not isinstance(obj, unicode):
+            obj = unicode(obj, encoding)
+    return obj
+
+
+def utf8(f):
+    """
+    Force the wrapped function to return utf-8 bytestream.
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        return to_utf8(f(*args, **kwargs))
+    return decorated
+
+
+# password & system helpers
+@utf8
 def randomized_string(size=16, chars=string.letters + string.digits + string.punctuation):
     """
     Generate randomized string using printable character. (Not using
@@ -26,9 +62,10 @@ def randomized_string(size=16, chars=string.letters + string.digits + string.pun
     return ''.join(random.choice(chars) for x in range(size))
 
 
+@utf8
 def make_pass(passwd=None):
     """
-    generate password using SHA-512 method, randomized salt and randomized
+    Generate password using SHA-512 method, randomized salt and randomized
     number of rounds.
     """
     if passwd is None:
@@ -59,6 +96,7 @@ def get_current_uid():
     return pwd.getpwuid(os.getuid()).pw_name
 
 
+# data structure helpers
 def flatten_list(messy_list):
     """
     Flatten an unruly list of lists. Cf. <http://stackoverflow.com/a/952914>
