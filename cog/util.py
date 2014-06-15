@@ -21,7 +21,7 @@ from passlib.hash import sha512_crypt
 # encoding conversion functions
 def to_utf8(obj):
     """
-    Convert non-utf-8 bytestream or an unicode string to utf-8 bytestream.
+    Convert non-utf-8 bytestream or a unicode string to a utf-8 bytestream.
     """
     local_encoding = sys.stdin.encoding
     if isinstance(obj, unicode):
