@@ -21,7 +21,7 @@ from passlib.hash import sha512_crypt
 # encoding conversion functions
 def to_utf8(obj):
     """
-    Convert non-utf-8 bytestream or unicode string to utf-8 bytestream.
+    Convert non-utf-8 bytestream or an unicode string to utf-8 bytestream.
     """
     local_encoding = sys.stdin.encoding
     if isinstance(obj, unicode):
@@ -92,7 +92,11 @@ def get_pass(username, service, prompt, use_keyring=False):
     return password
 
 
+@ensure_utf8
 def get_current_uid():
+    """
+    Return the owner of the cog process.
+    """
     return pwd.getpwuid(os.getuid()).pw_name
 
 
