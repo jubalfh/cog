@@ -11,8 +11,13 @@ import os, sys
 import yaml
 import cog.util as util
 
-user_settings_dir = os.environ['HOME'] + os.sep + '.cog'
-sys_settings_dir = '/etc/cog'
+user_config_dir = os.environ['HOME'] + os.sep + '.cog'
+config_files = []
+template_files = []
+for config_dir in ['/etc/cog', '/usr/local/etc/cog']:
+    if os.path.exists(config_dir):
+        config_files.append(config_dir + "/settings")
+        template_files.append(config_dir + "/templates.yaml")
 
 def read_yaml(file):
     data = dict()
@@ -47,8 +52,7 @@ class Profiles(dict):
     def __init__(self):
         super(self.__class__, self).__init__({})
 
-        user_settings_file = user_settings_dir + os.sep + 'settings'
-        config_files = [sys_settings_dir + os.sep + 'settings']
+        user_settings_file = user_config_dir + os.sep + 'settings'
 
         self.defaults = {
             'ldap_uri': 'ldap://ldap/',
@@ -70,7 +74,7 @@ class Profiles(dict):
         }
 
         if self.defaults.get('user_config'):
-            config_files.append(user_settings_dir + os.sep + 'settings')
+            config_files.append(user_settings_file)
         settings_data = merge_data(*config_files)
         self.user_config = settings_data.pop('user_config')
         self.profile = settings_data.pop('profile')
@@ -87,11 +91,8 @@ class Profiles(dict):
         if name in self.keys():
             self.profile = name
 
-
-user_template_file = user_settings_dir + os.sep + 'templates.yaml'
-sys_template_file = sys_settings_dir + os.sep + 'templates.yaml'
-
-template_data = merge_data(sys_template_file, user_template_file)
+template_files.append(user_config_dir + os.sep + 'templates.yaml')
+template_data = merge_data(*template_files)
 
 objects = dict()
 for object in ['accounts', 'groups', 'netgroups']:
