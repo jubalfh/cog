@@ -182,7 +182,8 @@ class Tree(object):
         self.ldap_handle = ldap.initialize(self.ldap_uri, trace_level=0, trace_file=sys.stderr)
         self.ldap_handle.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
         #self.ldap_handle.set_option(ldap.OPT_DEBUG_LEVEL, 255)
-        if self.ldap_encryption:
+
+        if not self.ldap_uri.startswith('ldaps') and self.ldap_encryption:
             if cacertfile:
                 self.ldap_handle.set_option(ldap.OPT_X_TLS_CACERTFILE, cacertfile)
             self.ldap_handle.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_DEMAND)
