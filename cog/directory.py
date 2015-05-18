@@ -208,7 +208,7 @@ class Tree(object):
         Check if the connection is live.
         """
         try:
-            data = self.ldap_handle.search_s(self.base_dn, ldap.SCOPE_BASE, u'objectClass=*', [])
+            data = self.ldap_handle.search_s(self.base_dn, ldap.SCOPE_BASE, 'objectClass=*', [])
         except ldap.LDAPError:
             return False
         return True

@@ -52,12 +52,13 @@ After cloning the repository for the first time, please run `sh flow-init`
 
 To test you must also install the following dependencies:
 
-* pytohn27-nose
-* python27-mock
+* python-nose
+* python-mock
 
 To run all tests, run the following in the root directory:
 
-    nosetests-2.7
+    nosetests
+
 # Dependencies #
 
 To install cog you need:
