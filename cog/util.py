@@ -13,7 +13,8 @@ import pwd
 import string
 import re
 import random
-import crypt
+import keyring
+import getpass
 
 from passlib.hash import sha512_crypt
 
@@ -33,6 +34,24 @@ def make_pass(passwd=None):
     salt = randomized_string(16, ( './' + string.letters + string.digits))
     iterations = random.randint(40000, 80000)
     return '{CRYPT}' + sha512_crypt.encrypt(passwd, salt=salt, rounds=iterations)
+
+
+def get_pass(username, service, prompt, use_keyring=False):
+    """
+    get a password string, either from user input or from system key/password
+    store
+    """
+    password = None
+    if use_keyring:
+        password = keyring.get_password(service, username)
+        if not password:
+            password = getpass.getpass(prompt)
+            if password:
+                keyring.set_password(service, username, password)
+    else:
+        password = getpass.getpass(prompt)
+    return password
+
 
 def get_current_uid():
     return pwd.getpwuid(os.getuid()).pw_name
