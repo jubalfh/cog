@@ -11,8 +11,14 @@ import os, sys
 import yaml
 import cog.util as util
 
-user_settings_dir = os.environ['HOME'] + os.sep + '.cog'
-sys_settings_dir = '/etc/cog'
+user_config_dir = os.path.expandvars("${HOME}/.cog")
+config_files = []
+template_files = []
+for config_dir in ['/etc/cog', (sys.argv[0].partition('/bin/')[0] + "/etc/cog")]:
+    if os.path.exists(config_dir):
+        config_files.append(config_dir + "/settings")
+        template_files.append(config_dir + "/templates.yaml")
+
 
 def read_yaml(file):
     data = dict()
@@ -24,6 +30,7 @@ def read_yaml(file):
         print e
     return data
 
+
 def merge_data(*files):
     data = dict()
     for file in files:
@@ -31,40 +38,52 @@ def merge_data(*files):
             data = util.merge(data, read_yaml(file))
     return data
 
+
 def expand_inheritances(template_data, section):
     template = dict()
     for k, v in template_data.get(section).iteritems():
-        if v.has_key('inherits'):
+        if 'inherits' in v:
             base = v.get('inherits')
             template[k] = util.merge(template_data.get(section).get(base).get('default'), v.get('default'))
         else:
             template[k] = v.get('default')
     return template
 
+
 class Profiles(dict):
     __metaclass__ = util.Singleton
 
     def __init__(self):
-
         super(self.__class__, self).__init__({})
+
+        user_settings_file = user_config_dir + '/settings'
 
         self.defaults = {
             'ldap_uri': 'ldap://ldap/',
             'ldap_encryption': True,
             'bind_dn': None,
             'bind_pass': None,
+            'keyring_service': 'org.makabra.cog',
+            'use_keyring': False,
             'user_rdn': 'uid',
             'user_query': '(&(%s=%s)(|(objectClass=posixAccount)(objectClass=inetOrgPerson)))',
             'group_query': '(&(cn=%s)(objectClass=posixGroup))',
             'netgroup_query': '(&(cn=%s)(objectClass=nisNetgroup))',
+            'min_uidnumber': 420000,
+            'max_uidnumber': 1000000,
+            'min_gidnumber': 420000,
+            'max_gidnumber': 1000000,
+            'rfc2307bis_group_object_class': 'groupOfMembers',
+            'rfc2307bis_group_member_attribute': 'member',
+            'rfc2307bis_group_sync_attributes': True,
+            'user_config': read_yaml(config_files[0]).get('user_config', True),
         }
 
-        user_settings_file = user_settings_dir + os.sep + 'settings'
-        sys_settings_file = sys_settings_dir + os.sep + 'settings'
-        settings_data = merge_data(sys_settings_file, user_settings_file)
-
+        if self.defaults.get('user_config'):
+            config_files.append(user_settings_file)
+        settings_data = merge_data(*config_files)
+        self.user_config = settings_data.pop('user_config')
         self.profile = settings_data.pop('profile')
-
         for k, v in settings_data.iteritems():
             self[k] = v
 
@@ -78,13 +97,9 @@ class Profiles(dict):
         if name in self.keys():
             self.profile = name
 
-
-user_template_file = user_settings_dir + os.sep + 'templates.yaml'
-sys_template_file = sys_settings_dir + os.sep + 'templates.yaml'
-
-template_data = merge_data(sys_template_file, user_template_file)
+template_files.append(user_config_dir + os.sep + 'templates.yaml')
+template_data = merge_data(*template_files)
 
 objects = dict()
 for object in ['accounts', 'groups', 'netgroups']:
     objects[object] = expand_inheritances(template_data, object)
-

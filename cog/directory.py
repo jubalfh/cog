@@ -8,11 +8,11 @@
 # lightweight wrapper over python-ldap functions
 
 import os, sys
-import getpass
 import time
 import ldif
 import ldap
 import ldap.dn
+import ldap.schema
 import ldap.modlist as modlist
 from functools import wraps
 from StringIO import StringIO
@@ -50,17 +50,21 @@ def get_probably_unique_uidnumber():
     # FIXME: use limits stored within directory, fall back to the full
     # directory search only if there is no other option available.
     # return tree.increment_atomically(settings.get('user_defaults_dn'), 'uidNext')
+    max_uidnumber = settings.get('max_uidnumber')
+    min_uidnumber = settings.get('min_uidnumber')
     return str(max([int(x['uidNumber'][0]) for x in
-                    tree.search(search_filter=('(&(objectClass=posixAccount)(uidNumber<=9900))'),
-                    attributes=['uidNumber'])]) + 1)
+                    tree.search(search_filter=('(&(objectClass=posixAccount)(uidNumber<=%s))' % max_uidnumber),
+                                attributes=['uidNumber'])] + [min_uidnumber]) + 1)
 
 
 def get_probably_unique_gidnumber():
     tree = Tree()
     # FIXME: use limits stored within directory!
+    max_gidnumber = settings.get('max_gidnumber')
+    min_gidnumber = settings.get('min_gidnumber')
     return str(max([int(x['gidNumber'][0]) for x in
-                    tree.search(search_filter=('(&(objectClass=posixGroup)(gidNumber<=9900))'),
-                                attributes=['gidNumber'])] + [9200]) + 1)
+                    tree.search(search_filter=('(&(objectClass=posixGroup)(gidNumber<=%s))' % max_gidnumber),
+                                attributes=['gidNumber'])] + [min_gidnumber]) + 1)
 
 def path2rdn(path):
     path_list = ["ou=%s," % x for x in path.strip('/').split('/')[::-1] if x]
@@ -79,14 +83,31 @@ def find_dn_for_uid(uid=None):
     if not uid:
         uid = util.get_current_uid()
     tree = Tree()
-    users = tree.search(search_filter=('(&(objectClass=posixAccount)(uid=%s))' % uid), attributes=['dn'])
+    base_dn = settings.get('user_dn')
+    query = '(&(objectClass=posixAccount)(uid=%s))' % uid
+    users = tree.search(base_dn, search_filter=query, attributes=['dn'])
     if len(users) > 1:
-        raise MultipleObjectsFound("Operator's uid not unique in the directory tree, can't guess bind DN.")
+        raise MultipleObjectsFound("The uid is not unique in the directory tree")
     elif not users:
         user_dn = None
     else:
         user_dn = users[0].dn
     return user_dn
+
+# a few schema helper functions
+def get_object_class(oc):
+    _, schema = ldap.schema.urlfetch(settings.get('ldap_uri'))
+    return schema.get_obj(ldap.schema.ObjectClass, oc)
+
+def is_structural(oc):
+    return get_object_class(oc).kind == 0
+
+def is_abstract(oc):
+    return get_object_class(oc).kind == 1
+
+def is_auxiliary(oc):
+    return get_object_class(oc).kind == 2
+
 
 # Classes
 
@@ -160,7 +181,8 @@ class Tree(object):
         self.ldap_handle = ldap.initialize(self.ldap_uri, trace_level=0, trace_file=sys.stderr)
         self.ldap_handle.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
         #self.ldap_handle.set_option(ldap.OPT_DEBUG_LEVEL, 255)
-        if self.ldap_encryption:
+
+        if not self.ldap_uri.startswith('ldaps') and self.ldap_encryption:
             if cacertfile:
                 self.ldap_handle.set_option(ldap.OPT_X_TLS_CACERTFILE, cacertfile)
             self.ldap_handle.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_DEMAND)
@@ -176,7 +198,10 @@ class Tree(object):
             if not self.bind_dn:
                 self.bind_dn = find_dn_for_uid()
             if not self.bind_pass:
-                self.bind_pass = getpass.getpass("enter your LDAP password: ")
+                self.bind_pass = util.get_pass(self.bind_dn,
+                                              settings.get('keyring_service'),
+                                              "enter your LDAP password: ",
+                                              use_keyring=settings.get('use_keyring'))
                 self._reconnect()
             self.ldap_handle.simple_bind_s(self.bind_dn, self.bind_pass)
             self.bound = True
@@ -186,7 +211,7 @@ class Tree(object):
         Check if the connection is live.
         """
         try:
-            data = self.ldap_handle.search_s(self.base_dn, ldap.SCOPE_BASE, u'objectClass=*', [])
+            data = self.ldap_handle.search_s(self.base_dn, ldap.SCOPE_BASE, 'objectClass=*', [])
         except ldap.LDAPError:
             return False
         return True
@@ -280,9 +305,31 @@ class Tree(object):
 
     @keep_connected
     @readwrite
+    def modify(self, changed_entry):
+        """
+        Modify contents of an LDAP entry.
+        """
+        dn = changed_entry.dn
+        old_entry = self.get(dn)
+        entry_modlist = modlist.modifyModlist(old_entry, changed_entry,
+                ignore_oldexistent=0)
+        self.ldap_handle.modify_s(dn, entry_modlist)
+
+    @keep_connected
+    @readwrite
+    def replace(self, new_entry):
+        """
+        Replace an existing LDAP entry with a new one.
+        """
+        dn = new_entry.dn
+        self.remove(dn)
+        self.add(dn, new_entry)
+
+    @keep_connected
+    @readwrite
     def remove(self, dn):
         """
-        Remove an entry from the LDAP directory."
+        Remove an entry from the LDAP directory.
         """
         self.ldap_handle.delete_s(dn)
 
@@ -303,26 +350,6 @@ class Tree(object):
         Rename an LDAP entry.
         """
         self.ldap_handle.rename_s(dn, new_rdn, delold=1)
-
-    @keep_connected
-    @readwrite
-    def modify(self, dn, changed_entry):
-        """
-        Modify contents of an LDAP entry.
-        """
-        old_entry = self.get(dn)
-        entry_modlist = modlist.modifyModlist(old_entry, changed_entry,
-                ignore_oldexistent=0)
-        self.ldap_handle.modify_s(dn, entry_modlist)
-
-    @keep_connected
-    @readwrite
-    def replace(self, dn, new_entry):
-        """
-        Replace whole LDAP directory object with a new one.
-        """
-        self.remove(dn)
-        self.add(dn, new_entry)
 
     @keep_connected
     @readwrite

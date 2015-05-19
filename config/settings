@@ -1,6 +1,7 @@
 %YAML 1.0
 ---
 profile: local
+user_config: true
 
 local:
   description: an example profile
@@ -12,5 +13,5 @@ local:
   ldap_encryption: false
   ldap_cacertfile: /path/to/ca_certificate
   bind_dn: cn=root,dc=playground,dc=tree
-  bind_pass: password
+  # bind_pass: password
 

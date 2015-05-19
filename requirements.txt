@@ -2,3 +2,4 @@ pbr
 passlib
 python-ldap
 pyyaml
+keyring
