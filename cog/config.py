@@ -11,13 +11,14 @@ import os, sys
 import yaml
 import cog.util as util
 
-user_config_dir = os.environ['HOME'] + os.sep + '.cog'
+user_config_dir = os.path.expandvars("${HOME}/.cog")
 config_files = []
 template_files = []
-for config_dir in ['/etc/cog', '/usr/local/etc/cog']:
+for config_dir in ['/etc/cog', (sys.argv[0].partition('/bin/')[0] + "/etc/cog")]:
     if os.path.exists(config_dir):
         config_files.append(config_dir + "/settings")
         template_files.append(config_dir + "/templates.yaml")
+
 
 def read_yaml(file):
     data = dict()
@@ -29,6 +30,7 @@ def read_yaml(file):
         print e
     return data
 
+
 def merge_data(*files):
     data = dict()
     for file in files:
@@ -36,15 +38,17 @@ def merge_data(*files):
             data = util.merge(data, read_yaml(file))
     return data
 
+
 def expand_inheritances(template_data, section):
     template = dict()
     for k, v in template_data.get(section).iteritems():
-        if v.has_key('inherits'):
+        if 'inherits' in v:
             base = v.get('inherits')
             template[k] = util.merge(template_data.get(section).get(base).get('default'), v.get('default'))
         else:
             template[k] = v.get('default')
     return template
+
 
 class Profiles(dict):
     __metaclass__ = util.Singleton
@@ -52,7 +56,7 @@ class Profiles(dict):
     def __init__(self):
         super(self.__class__, self).__init__({})
 
-        user_settings_file = user_config_dir + os.sep + 'settings'
+        user_settings_file = user_config_dir + '/settings'
 
         self.defaults = {
             'ldap_uri': 'ldap://ldap/',
@@ -99,4 +103,3 @@ template_data = merge_data(*template_files)
 objects = dict()
 for object in ['accounts', 'groups', 'netgroups']:
     objects[object] = expand_inheritances(template_data, object)
-
