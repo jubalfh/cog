@@ -8,7 +8,6 @@
 # lightweight wrapper over python-ldap functions
 
 import os, sys
-import getpass
 import time
 import ldif
 import ldap
@@ -199,7 +198,10 @@ class Tree(object):
             if not self.bind_dn:
                 self.bind_dn = find_dn_for_uid()
             if not self.bind_pass:
-                self.bind_pass = getpass.getpass("enter your LDAP password: ")
+                self.bind_pass = util.get_pass(self.bind_dn,
+                                              settings.get('keyring_service'),
+                                              "enter your LDAP password: ",
+                                              use_keyring=settings.get('use_keyring'))
                 self._reconnect()
             self.ldap_handle.simple_bind_s(self.bind_dn, self.bind_pass)
             self.bound = True

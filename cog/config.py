@@ -59,6 +59,8 @@ class Profiles(dict):
             'ldap_encryption': True,
             'bind_dn': None,
             'bind_pass': None,
+            'keyring_service': 'org.makabra.cog',
+            'use_keyring': False,
             'user_rdn': 'uid',
             'user_query': '(&(%s=%s)(|(objectClass=posixAccount)(objectClass=inetOrgPerson)))',
             'group_query': '(&(cn=%s)(objectClass=posixGroup))',
