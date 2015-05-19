@@ -7,7 +7,13 @@ a flexible LDAP management tool
 
 From the root of the source tree run:
 
-    sudo python setup.py install --install-data=/
+    python setup.py install
+
+or
+
+    sudo python setup.py install
+
+The tool should now work properly when installed in virtualenv.
 
 # Usage #
 
@@ -19,7 +25,9 @@ From the root of the source tree run:
 
 The tool copies its configuration files into ~/.cog on first run; the
 system-wide configuration is in /etc/cog, the settings are merged when
-the tool is being run.
+the tool is being run. This version of cog supports storing user
+credentials in your system's wallet/keyring/keychain: add `use_keyring:
+true` to your settings file in order to enable it.
 
 To start using the tool please either create a new profile similar to
 the default (“local”) and set up is as default or simply edit the local
@@ -42,6 +50,13 @@ install the extension manually.
 
 After cloning the repository for the first time, please run `sh flow-init`
 – it will initialise git flow with the values I'm using.
+
+# OS-specific notes #
+
+* Python-ldap does not agree with libldap shipped with OS X Yosemite,
+  using non-system build of openldap libraries for python-ldap is
+  probably the best solution. If you're using Homebrew, please install
+  openldap (from the homebrew/dupes tap) before installing python-ldap.
 
 # Known Bugs and Limitations #
 
@@ -68,4 +83,5 @@ To install cog you need:
 * python-setuptools
 * python-ldap
 * PyYAML
+* keyring
 
