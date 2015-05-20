@@ -10,15 +10,26 @@ grant:
     --on-host:
       short: -H
       action: append
-      dest: host
+      dest: services
       nargs: '+'
       metavar: <host name>
+    --on-cluster:
+      short: -c
+      action: append
+      dest: services
+      nargs: '+'
+      metavar: <cluster name>
     --on-service:
       short: -s
       action: append
-      dest: service
+      dest: services
       nargs: '+'
       metavar: <service short name>
+    --privileged:
+      short: -P
+      dest: privileged
+      action: store_true
+      help: make the access privileged
 
 deny:
   description: deny access to user(s) at specified host(s)
@@ -32,28 +43,34 @@ deny:
     --on-host:
       short: -H
       action: append
-      dest: host
+      dest: services
       nargs: '+'
       metavar: <host name>
+    --on-cluster:
+      short: -c
+      action: append
+      dest: services
+      nargs: '+'
+      metavar: <cluster name>
     --on-service:
       short: -s
       action: append
-      dest: service
+      dest: services
       nargs: '+'
       metavar: <service short name>
 
 revoke:
   description: revoke access grant or denial
   main:
-    --type:
+    --revoke-type:
       short: -t
-      action: store
+      action: append
       choices:
-      - grant
-      - deny
-      dest: revoke_type
-      default: grant
-      metavar: <access type>
+      - granted
+      - denied
+      - privileged
+      dest: revoke_levels 
+      metavar: <access level>
     --from-user:
       short: -u
       action: append
@@ -63,15 +80,21 @@ revoke:
     --on-host:
       short: -H
       action: append
-      dest: host
+      dest: services
       nargs: '+'
       metavar: <host name>
+    --on-cluster:
+      short: -c
+      action: append
+      dest: services
+      nargs: '+'
+      metavar: <cluster name>
     --on-service:
       short: -s
       action: append
-      dest: service
+      dest: services
       nargs: '+'
-      metavar: <service short name>
+      metavar: <service name>
 
 show:
   description: show access details for user(s) or host(s)
@@ -83,6 +106,7 @@ show:
       - user
       - host
       - service
+      - cluster
       dest: query_type
     query:
       nargs: '+'
