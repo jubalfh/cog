@@ -1,5 +1,6 @@
 
 # -*- coding: utf-8 -*-
+# generated from netgroup.yaml
 
 import sys
 import argparse
@@ -14,10 +15,16 @@ edit_parser = tool_subparsers.add_parser('edit', help='edit a netgroup')
 group0_parser = edit_parser.add_argument_group('user management')
 
 group0_parser.add_argument(
+  '--add-triple', action='append', dest='addNisNetgroupTriple', metavar='<triples to add>'
+)
+group0_parser.add_argument(
   '--del-triple', action='append', dest='delNisNetgroupTriple', metavar='<triples to remove>'
 )
 group0_parser.add_argument(
-  '--add-triple', action='append', dest='addNisNetgroupTriple', metavar='<triples to add>'
+  '--del-member', action='append', dest='delmemberNisNetgroup', metavar='<netgroup members to remove>'
+)
+group0_parser.add_argument(
+  '--add-member', action='append', dest='addmemberNisNetgroup', metavar='<netgroup members to add>'
 )
 group0_parser.add_argument(
   '--description', action='store', dest='description', metavar='<netgroup description>'
@@ -47,6 +54,9 @@ group1_parser.add_argument(
 )
 group1_parser.add_argument(
   '--description', action='store', dest='description', metavar='<netgroup description>'
+)
+group1_parser.add_argument(
+  '--with-members', '-m', action='append', dest='memberNisNetgroup', metavar='<netgroup member groups to add>'
 )
 
 # The remove command.
