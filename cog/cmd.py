@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, Activision Publishing, Inc.
+# Copyright (c) 2013 Activision Publishing, Inc.
+# Copyright (c) 2014, 2015 Miroslaw Baran <miroslaw+p+cog@makabra.org>
 
 # the cog project is free software under 3-clause BSD licence
 # see the LICENCE file in the project root for copying terms
 
-import sys, os, re, shutil
+import sys
+import os
+import shutil
 import argparse
 from importlib import import_module
 from cog.config import Profiles
 
 path = os.path.dirname(os.path.abspath(__file__))
+
 
 def find_subcommands():
     for filename in os.listdir(path + os.sep + 'cli'):
@@ -18,19 +22,26 @@ def find_subcommands():
         if ext.endswith('.py') and not (name.endswith('_argparser') or name == '__init__'):
             yield name
 
+
 def run(command):
     module = 'cog.cli.%s' % command
     command = import_module(module)
     sys.exit(command.main())
 
+
 def usage(commands, profiles):
+    profile_list = ('%s and %s' % (', '.join(profiles[:-1]), profiles[-1]) if
+                        len(profiles) > 1 else profiles[0])
+    command_list = ('%s and %s' % (', '.join(commands[:-1]), commands[-1]) if
+                        len(commands) > 1 else commands[0])
+
     print 'cog, a flexible LDAP directory manager'
     print
     print 'Usage: cog [-p|--profile <profile>] [-h|--help] command [options]'
     print '       for more details run ‘cog command --help’ and'
     print '                            ‘cog command subcommand --help’'
-    print '       available profiles: %s and %s.' % (', '.join(profiles[:-1]), profiles[-1])
-    print '       available commands: %s and %s.' % (', '.join(commands[:-1]), commands[-1])
+    print '       available profiles: %s.' % profile_list
+    print '       available commands: %s.' % command_list
     print
     print 'Command summary:'
     parser = dict()
@@ -41,12 +52,14 @@ def usage(commands, profiles):
         print parser[command].format_usage()[6:-1]
     print
 
+
 def make_user_config():
     user_dir = os.environ['HOME'] + os.sep + '.cog'
     conf_dir = '/etc/cog'
     if not os.path.exists(user_dir):
         os.makedirs(user_dir, mode=0750)
         shutil.copyfile(conf_dir + os.sep + 'examples/settings.local', user_dir + os.sep + 'settings')
+
 
 def main():
     profiles = Profiles()
