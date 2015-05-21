@@ -7,8 +7,6 @@
 
 
 import sys
-import getpass
-import argparse
 import cog.util as util
 import cog.directory as dir
 from cog.objects.netgroup import Netgroup
@@ -37,20 +35,26 @@ def edit_netgroup(args):
     netgroup = Netgroup(args.pop('cn'))
     for attr, val in args.iteritems():
         attr = attr.lower()
+        print attr, val
         if attr == 'description':
             netgroup.set_description(val)
-        elif attr == 'addnetgrouptriple':
+        elif attr == 'addnisnetgrouptriple':
             netgroup.add_triple(val)
-        elif attr == 'delnetgrouptriple':
+        elif attr == 'delnisnetgrouptriple':
             netgroup.del_triple(val)
+        elif attr == 'addmembernisnetgroup':
+            netgroup.add_member(val)
+        elif attr == 'delmembernisnetgroup':
+            netgroup.del_member(val)
+    print netgroup.data
     netgroup.commit_changes()
 
 def rename_netgroup(args):
-    netgroup = netgroup(args.get('cn'))
+    netgroup = Netgroup(args.get('cn'))
     netgroup.rename(args.get('newCn'))
 
 def remove_netgroup(cn):
-    netgroup = netgroup(cn)
+    netgroup = Netgroup(cn)
     netgroup.remove()
 
 def main():
