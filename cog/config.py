@@ -7,25 +7,29 @@
 
 # process configuration files
 
-import os, sys
+import os
+import sys
 import yaml
+import shutil
 import cog.util as util
 
-user_config_dir = os.path.expandvars("${HOME}/.cog")
+
+user_config_dir = os.path.join(os.path.expandvars('${HOME}'), '.cog')
+config_dirs = []
 config_files = []
 template_files = []
-for config_dir in ['/etc/cog', (sys.argv[0].partition('/bin/')[0] + "/etc/cog")]:
+for config_dir in ['/etc/cog', os.path.join(sys.argv[0].partition('/bin/')[0], "etc/cog")]:
     if os.path.exists(config_dir):
-        config_files.append(config_dir + "/settings")
-        template_files.append(config_dir + "/templates.yaml")
+        config_dirs.append(config_dir)
+        config_files.append(os.path.join(config_dir, "settings"))
+        template_files.append(os.path.join(config_dir, "templates.yaml"))
 
 
-def read_yaml(file):
+def read_yaml(filename):
     data = dict()
     try:
-        fh = open(file)
-        data = yaml.safe_load(fh)
-        fh.close()
+        with open(filename) as fh:
+            data = yaml.safe_load(fh)
     except (IOError, yaml.YAMLError), e:
         print e
     return data
@@ -50,13 +54,20 @@ def expand_inheritances(template_data, section):
     return template
 
 
+def make_user_config():
+    if not os.path.exists(user_config_dir):
+        os.makedirs(user_config_dir, mode=0750)
+        shutil.copyfile(os.path.join(config_dirs[0], 'examples/settings.local'),
+                        os.path.join(user_config_dir, 'settings'))
+
+
 class Profiles(dict):
     __metaclass__ = util.Singleton
 
     def __init__(self):
         super(self.__class__, self).__init__({})
 
-        user_settings_file = user_config_dir + '/settings'
+        user_settings_file = os.path.join(user_config_dir, 'settings')
 
         self.defaults = {
             'ldap_uri': 'ldap://ldap/',
@@ -97,7 +108,7 @@ class Profiles(dict):
         if name in self.keys():
             self.profile = name
 
-template_files.append(user_config_dir + os.sep + 'templates.yaml')
+template_files.append(os.path.join(user_config_dir, 'templates.yaml'))
 template_data = merge_data(*template_files)
 
 objects = dict()

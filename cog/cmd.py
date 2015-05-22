@@ -11,7 +11,7 @@ import os
 import shutil
 import argparse
 from importlib import import_module
-from cog.config import Profiles
+from cog.config import Profiles, make_user_config
 
 path = os.path.dirname(os.path.abspath(__file__))
 
@@ -31,9 +31,9 @@ def run(command):
 
 def usage(commands, profiles):
     profile_list = ('%s and %s' % (', '.join(profiles[:-1]), profiles[-1]) if
-                        len(profiles) > 1 else profiles[0])
+                    len(profiles) > 1 else profiles[0])
     command_list = ('%s and %s' % (', '.join(commands[:-1]), commands[-1]) if
-                        len(commands) > 1 else commands[0])
+                    len(commands) > 1 else commands[0])
 
     print 'cog, a flexible LDAP directory manager'
     print
@@ -51,14 +51,6 @@ def usage(commands, profiles):
         parser[command].add_help = False
         print parser[command].format_usage()[6:-1]
     print
-
-
-def make_user_config():
-    user_dir = os.environ['HOME'] + os.sep + '.cog'
-    conf_dir = '/etc/cog'
-    if not os.path.exists(user_dir):
-        os.makedirs(user_dir, mode=0750)
-        shutil.copyfile(conf_dir + os.sep + 'examples/settings.local', user_dir + os.sep + 'settings')
 
 
 def main():
