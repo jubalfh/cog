@@ -129,25 +129,19 @@ class Entry(cidict):
         self.dn = dn
 
     def replace(self, attr, values):
-        if type(values) is not list:
-            values = [values]
-        self[attr] = values
+        self[attr] = list(util.loop_on(values))
 
     def append(self, attr, values):
-        if type(values) is not list:
-            values = [values]
         if self.has_key(attr):
-            for value in values:
+            for value in util.loop_on(values):
                 if value not in self[attr]:
                     self[attr].append(value)
         else:
             self[attr] = values
 
     def remove(self, attr, values):
-        if type(values) is not list:
-            values = [values]
         if self.has_key(attr):
-            for value in values:
+            for value in util.loop_on(values):
                 if value in self[attr]:
                     self[attr].remove(value)
             if not self[attr]:

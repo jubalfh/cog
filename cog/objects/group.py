@@ -77,9 +77,7 @@ class Group(object):
 
     @group_exists
     def add_uid(self, uids):
-        if type(uids) is not list:
-            uids = [uids]
-        for uid in uids:
+        for uid in util.loop_on(uids):
             if ('memberUid' not in self.data or
                   uid not in self.data['memberUid']):
                 self.data.append('memberUid', uid)
@@ -93,9 +91,7 @@ class Group(object):
 
     @group_exists
     def del_uid(self, uids):
-        if type(uids) is not list:
-            uids = [uids]
-        for uid in uids:
+        for uid in util.loop_on(uids):
             self.data.remove('memberUid', uid)
             if rfc2307bis:
                 uid_dn = dir.find_dn_for_uid(uid)
