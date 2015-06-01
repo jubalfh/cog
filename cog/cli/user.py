@@ -108,7 +108,7 @@ def show_user(args):
     query = '(&(objectClass=*)(%s=%s))'
     attrs = ['uid', 'cn', 'mail', 'title', 'o', 'uidNumber', 'gidNumber']
     if args.get('verbose'):
-        attrs += ['objectClass', 'loginShell', 'homeDirectory', 'modifiersName', 'modifyTimestamp', 'sshPublicKeys']
+        attrs += ['objectClass', 'loginShell', 'homeDirectory', 'modifiersName', 'modifyTimestamp', 'sshPublicKey']
     for name in names:
         search = tree.search(search_filter=(query % (user_rdn, name)), attributes=attrs)
         user = User(name)
