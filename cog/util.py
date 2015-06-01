@@ -14,6 +14,7 @@ import random
 import keyring
 import getpass
 
+from itertools import chain
 from passlib.hash import sha512_crypt
 
 
@@ -59,11 +60,22 @@ def get_current_uid():
     return pwd.getpwuid(os.getuid()).pw_name
 
 
-def flatten_list(messy_list):
+def loop_on(input):
+    if isinstance(input, basestring):
+        yield input
+    else:
+        try:
+            for item in input:
+                yield item
+        except TypeError:
+            yield input
+
+
+def flatten(list_of_lists):
     """
-    Flatten an unruly list of lists. Cf. <http://stackoverflow.com/a/952914>
+    Flatten one level of nesting
     """
-    return [item for sublist in messy_list for item in sublist]
+    return chain.from_iterable(list_of_lists)
 
 
 def merge(d1, d2):
