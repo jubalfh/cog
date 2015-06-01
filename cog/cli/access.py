@@ -44,9 +44,9 @@ def get_access_group(name, priv_level='granted'):
 
 
 def manage_access(args, priv_level='granted'):
-    for access_object in util.flatten_list(args.get('services', [])):
+    for access_object in util.flatten(args.get('services', [])):
         access_group = get_access_group(access_object.lower(), priv_level)
-        for uid in util.flatten_list(args.get('uid')):
+        for uid in util.flatten(args.get('uid')):
             access_group.add_triple([make_triple(None, uid, None)])
         access_group.commit_changes()
 
@@ -55,9 +55,9 @@ def revoke_access(args):
     revoke_levels = args.pop('revoke_levels', ['granted'])
     for priv_level in access_levels.keys():
         if access_levels[priv_level] in revoke_levels:
-            for access_object in util.flatten_list(args.get('services', [])):
+            for access_object in util.flatten(args.get('services', [])):
                 access_group = get_access_group(access_object.lower(), priv_level)
-                for uid in util.flatten_list(args.get('uid')):
+                for uid in util.flatten(args.get('uid')):
                     access_group.del_triple(make_triple(None, uid, None))
                     access_group.commit_changes()
 

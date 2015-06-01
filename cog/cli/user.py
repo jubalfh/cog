@@ -103,7 +103,7 @@ def remove_user(name):
     user.remove()
 
 def show_user(args):
-    names = util.flatten_list(args.get('name'))
+    names = util.flatten(args.get('name'))
     tree = dir.Tree()
     query = '(&(objectClass=*)(%s=%s))'
     attrs = ['uid', 'cn', 'mail', 'title', 'o', 'uidNumber', 'gidNumber']
@@ -113,7 +113,7 @@ def show_user(args):
         search = tree.search(search_filter=(query % (user_rdn, name)), attributes=attrs)
         user = User(name)
         for item in search:
-            groups = { 'groups': sorted(util.flatten_list([group for group in user.find_groups()])) }
+            groups = { 'groups': sorted(util.flatten([group for group in user.find_groups()])) }
             account = { name: util.merge(dict(item), groups) }
             print yaml.safe_dump(account, allow_unicode=True, default_flow_style=False)
 
