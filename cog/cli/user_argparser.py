@@ -1,5 +1,6 @@
 
 # -*- coding: utf-8 -*-
+# generated from user.yaml
 
 import sys
 import argparse
@@ -20,22 +21,27 @@ rename_parser.add_argument(
 
 # The add command.
 add_parser = tool_subparsers.add_parser('add', help='add new user account to the directory.')
+group0_parser = add_parser.add_argument_group('account specific')
+
+group0_parser.add_argument(
+  '--password', '-P', action='store', dest='userPassword', metavar='<account\'s owner password>'
+)
+group0_parser.add_argument(
+  '--home', action='store', dest='homeDirectory', metavar='<path to the home directory>'
+)
+group0_parser.add_argument(
+  '--shell', action='store', dest='loginShell', metavar='<path to the shell interpreter>'
+)
 add_parser.add_argument(
   '--type', '-t', action='store', default='generic', dest='account_type', metavar='<type of account>'
 )
 add_parser.add_argument(
   'name', action='store', help='account name', metavar='<name>'
 )
-group1_parser = add_parser.add_argument_group('account specific')
+group1_parser = add_parser.add_argument_group('miscellaneous')
 
 group1_parser.add_argument(
-  '--password', '-P', action='store', dest='userPassword', metavar='<account\'s owner password>'
-)
-group1_parser.add_argument(
-  '--home', action='store', dest='homeDirectory', metavar='<path to the home directory>'
-)
-group1_parser.add_argument(
-  '--shell', action='store', dest='loginShell', metavar='<path to the shell interpreter>'
+  '--ssh-public-key', action='append', dest='sshPublicKey', metavar='<path to public ssh key>'
 )
 group1_parser = add_parser.add_argument_group('personal information')
 
@@ -83,22 +89,30 @@ show_parser.add_argument(
 
 # The edit command.
 edit_parser = tool_subparsers.add_parser('edit', help='edit existing user data in the directory')
+group0_parser = edit_parser.add_argument_group('public key management')
+
+group0_parser.add_argument(
+  '--del-ssh-public-key', '-K', action='append', dest='delSshPublicKey', metavar='<path to ssh key to be deleted>'
+)
+group0_parser.add_argument(
+  '--add-ssh-public-key', '-k', action='append', dest='addSshPublicKey', metavar='<path to new public ssh key>'
+)
+group0_parser = edit_parser.add_argument_group('account specific')
+
+group0_parser.add_argument(
+  '--reset-password', '-r', dest='resetPassword', action='store_true', help='<reset user\'s password>'
+)
+group0_parser.add_argument(
+  '--home', action='store', dest='homeDirectory', metavar='<new home directory path>'
+)
+group0_parser.add_argument(
+  '--shell', action='store', dest='loginShell', metavar='<new shell interpreter path>'
+)
 edit_parser.add_argument(
   '--type', '-t', action='store', dest='account_type', metavar='<change account type>'
 )
 edit_parser.add_argument(
   'name', action='store', help='account name'
-)
-group1_parser = edit_parser.add_argument_group('account specific')
-
-group1_parser.add_argument(
-  '--reset-password', '-r', dest='resetPassword', action='store_true', help='<reset user\'s password>'
-)
-group1_parser.add_argument(
-  '--home', action='store', dest='homeDirectory', metavar='<new home directory path>'
-)
-group1_parser.add_argument(
-  '--shell', action='store', dest='loginShell', metavar='<new shell interpreter path>'
 )
 group1_parser = edit_parser.add_argument_group('personal information')
 
