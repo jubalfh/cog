@@ -13,9 +13,26 @@ import string
 import random
 import keyring
 import getpass
+import sshpubkeys
 
+from sshpubkeys import SSHKey
 from itertools import chain
 from passlib.hash import sha512_crypt
+
+
+def read_ssh_key(path):
+    """
+    Read an SSH key given path, bail out when bad. Limit the keyfile length.
+    """
+    key = None
+    try:
+        with open(path) as key_fh:
+            key = SSHKey(key_fh.read(262144)).keydata.strip()
+    except IOError as io_exc:
+        print io_exc.message
+    except sshpubkeys.InvalidKeyException as key_exc:
+        print key_exc.message
+    return key
 
 
 def randomized_string(size=16, chars=string.letters + string.digits + string.punctuation):
