@@ -3,3 +3,4 @@ passlib
 python-ldap
 pyyaml
 keyring
+sshpubkeys

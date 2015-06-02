@@ -68,11 +68,11 @@ add:
       action: store
       dest: userPassword
       metavar: <account\'s owner password>
-#  miscellaneous:
-#    --ssh-public-key:
-#        action: append
-#        dest: sshPublicKey
-#        metavar: <path to public ssh key>
+  miscellaneous:
+    --ssh-public-key:
+      action: append
+      dest: sshPublicKey
+      metavar: <path to public ssh key>
 
 edit:
   description: edit existing user data in the directory
@@ -154,15 +154,17 @@ edit:
       action: store
       dest: homeDirectory
       metavar: <new home directory path>
-#  miscellaneous:
-#    --add-ssh-public-key:
-#      action: append
-#      dest: addPublicSshKey
-#      metavar: <path to new public ssh key>
-#    --del-ssh-public-key:
-#      action: append
-#      dest: delPublicSshKey
-#      metavar: <ssh key fingerprint to remove>
+  public key management:
+    --add-ssh-public-key:
+      short: -k
+      action: append
+      dest: addSshPublicKey
+      metavar: <path to new public ssh key>
+    --del-ssh-public-key:
+      short: -K
+      action: append
+      dest: delSshPublicKey
+      metavar: <path to ssh key to be deleted>
 
 show:
   description: show account data

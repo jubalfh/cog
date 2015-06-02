@@ -84,4 +84,4 @@ To install cog you need:
 * python-ldap
 * PyYAML
 * keyring
-
+* sshpubkeys

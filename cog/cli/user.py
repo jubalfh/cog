@@ -7,8 +7,6 @@
 
 
 import sys
-import getpass
-import argparse
 import yaml
 import cog.util as util
 import cog.directory as dir
@@ -21,6 +19,7 @@ accounts = objects.get('accounts')
 settings = Profiles().current()
 user_rdn = settings.get('user_rdn')
 
+
 def add_user(args, account_type):
     user_data = util.merge(accounts.get(account_type), args)
     if account_type in accounts.keys():
@@ -29,6 +28,7 @@ def add_user(args, account_type):
         path = user_data.pop('path', None)
         groups = user_data.pop('group', None)
         requires = user_data.pop('requires', None)
+        ssh_key = util.read_ssh_key(user_data.pop('sshpublickey'))
         dn = "%s=%s,%s" % (user_rdn, name, dir.get_account_base(account_type))
         operator_uid = util.get_current_uid()
         for nameattr in ['cn', 'sn', 'givenName']:
@@ -40,15 +40,17 @@ def add_user(args, account_type):
             user_data['uidNumber'] = dir.get_probably_unique_uidnumber()
         if not user_data.get('homeDirectory') and 'homeDirectory' in requires:
             user_data['homeDirectory'] = "/home/%s" % user_data['uid']
-
+        if ssh_key:
+            user_data['sshPublicKey'] = ssh_key
+            user_data['objectClass'].append('ldapPublicKey')
         user_data['userPassword'] = util.make_pass(user_data.get('userPassword'))
-
         user_entry = dir.Entry(dn=dn, attrs=user_data)
         newuser = User(name, user_entry, groups=groups)
         newuser.add()
     else:
         print "Account type %s is not exactly known." % account_type
         sys.exit(1)
+
 
 def edit_user(args):
     replacable_attrs = ['uidnumber', 'gidnumber', 'sn', 'cn', 'givenname',
@@ -81,8 +83,19 @@ def edit_user(args):
         if attr == 'addgroup':
             for group in val:
                 user.addgroup(group)
+        if attr == 'delsshpublickey':
+            for path in util.loop_on(val):
+                ssh_key = util.read_ssh_key(path)
+                if ssh_key:
+                    user.remove_from_item(attr[3:], ssh_key)
+        if attr == 'addsshpublickey':
+            for path in util.loop_on(val):
+                ssh_key = util.read_ssh_key(path)
+                if ssh_key:
+                    user.append_to_item(attr[3:], ssh_key)
 
     user.commit_changes()
+
 
 def handle_types(args):
     if args.get('list_types'):
@@ -90,31 +103,35 @@ def handle_types(args):
         for acc_type in sorted(accounts):
             print "  %s" % acc_type
 
+
 def rename_user(args):
     user = User(args.get('name'), bind=True)
     user.rename(args.get('newName'))
+
 
 def retire_user(name):
     user = User(name, bind=True)
     user.retire()
 
+
 def remove_user(name):
     user = User(name, bind=True)
     user.remove()
 
+
 def show_user(args):
-    names = util.flatten_list(args.get('name'))
+    names = util.flatten(args.get('name'))
     tree = dir.Tree()
     query = '(&(objectClass=*)(%s=%s))'
     attrs = ['uid', 'cn', 'mail', 'title', 'o', 'uidNumber', 'gidNumber']
     if args.get('verbose'):
-        attrs += ['objectClass', 'loginShell', 'homeDirectory', 'modifiersName', 'modifyTimestamp', 'sshPublicKeys']
+        attrs += ['objectClass', 'loginShell', 'homeDirectory', 'modifiersName', 'modifyTimestamp', 'sshPublicKey']
     for name in names:
         search = tree.search(search_filter=(query % (user_rdn, name)), attributes=attrs)
         user = User(name)
         for item in search:
-            groups = { 'groups': sorted(util.flatten_list([group for group in user.find_groups()])) }
-            account = { name: util.merge(dict(item), groups) }
+            groups = {'groups': sorted(util.flatten([group for group in user.find_groups()]))}
+            account = {name: util.merge(dict(item), groups)}
             print yaml.safe_dump(account, allow_unicode=True, default_flow_style=False)
 
 

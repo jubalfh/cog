@@ -13,8 +13,26 @@ import string
 import random
 import keyring
 import getpass
+import sshpubkeys
 
+from sshpubkeys import SSHKey
+from itertools import chain
 from passlib.hash import sha512_crypt
+
+
+def read_ssh_key(path):
+    """
+    Read an SSH key given path, bail out when bad. Limit the keyfile length.
+    """
+    key = None
+    try:
+        with open(path) as key_fh:
+            key = SSHKey(key_fh.read(262144)).keydata.strip()
+    except IOError as io_exc:
+        print io_exc.message
+    except sshpubkeys.InvalidKeyException as key_exc:
+        print key_exc.message
+    return key
 
 
 def randomized_string(size=16, chars=string.letters + string.digits + string.punctuation):
@@ -59,11 +77,22 @@ def get_current_uid():
     return pwd.getpwuid(os.getuid()).pw_name
 
 
-def flatten_list(messy_list):
+def loop_on(input):
+    if isinstance(input, basestring):
+        yield input
+    else:
+        try:
+            for item in input:
+                yield item
+        except TypeError:
+            yield input
+
+
+def flatten(list_of_lists):
     """
-    Flatten an unruly list of lists. Cf. <http://stackoverflow.com/a/952914>
+    Flatten one level of nesting
     """
-    return [item for sublist in messy_list for item in sublist]
+    return chain.from_iterable(list_of_lists)
 
 
 def merge(d1, d2):

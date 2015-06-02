@@ -10,6 +10,11 @@ add:
       action: append
       dest: nisNetgroupTriple
       metavar: <netgroup triples to add>
+    --with-members:
+      short: -m
+      action: append
+      dest: memberNisNetgroup
+      metavar: <netgroup member groups to add>
     --description:
       action: store
       dest: description
@@ -30,6 +35,14 @@ edit:
       action: append
       dest: delNisNetgroupTriple
       metavar: <triples to remove>
+    --add-member:
+      action: append
+      dest: addmemberNisNetgroup
+      metavar: <netgroup members to add>
+    --del-member:
+      action: append
+      dest: delmemberNisNetgroup
+      metavar: <netgroup members to remove>
     --description:
       action: store
       dest: description

@@ -61,5 +61,5 @@ netgroups:
     desc: host access policies
     inherits: generic
     default:
-      path: host access policy
+      path: host access
 
