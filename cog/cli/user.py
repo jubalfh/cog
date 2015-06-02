@@ -29,6 +29,7 @@ def add_user(args, account_type):
         path = user_data.pop('path', None)
         groups = user_data.pop('group', None)
         requires = user_data.pop('requires', None)
+        ssh_key = util.read_ssh_key(user_data.pop('sshpublickey'))
         dn = "%s=%s,%s" % (user_rdn, name, dir.get_account_base(account_type))
         operator_uid = util.get_current_uid()
         for nameattr in ['cn', 'sn', 'givenName']:
@@ -40,9 +41,10 @@ def add_user(args, account_type):
             user_data['uidNumber'] = dir.get_probably_unique_uidnumber()
         if not user_data.get('homeDirectory') and 'homeDirectory' in requires:
             user_data['homeDirectory'] = "/home/%s" % user_data['uid']
-
+        if ssh_key:
+            user_data['sshPublicKey'] = ssh_key
+            user_data['objectClass'].append('ldapPublicKey')
         user_data['userPassword'] = util.make_pass(user_data.get('userPassword'))
-
         user_entry = dir.Entry(dn=dn, attrs=user_data)
         newuser = User(name, user_entry, groups=groups)
         newuser.add()
@@ -81,6 +83,16 @@ def edit_user(args):
         if attr == 'addgroup':
             for group in val:
                 user.addgroup(group)
+        if attr == 'delsshpublickey':
+            for path in util.loop_on(val):
+                ssh_key = util.read_ssh_key(path)
+                if ssh_key:
+                    user.remove_from_item(attr[3:], ssh_key)
+        if attr == 'addsshpublickey':
+            for path in util.loop_on(val):
+                ssh_key = util.read_ssh_key(path)
+                if ssh_key:
+                    user.append_to_item(attr[3:], ssh_key)
 
     user.commit_changes()
 
