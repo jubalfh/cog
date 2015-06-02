@@ -7,8 +7,6 @@
 
 
 import sys
-import getpass
-import argparse
 import yaml
 import cog.util as util
 import cog.directory as dir
@@ -20,6 +18,7 @@ from user_argparser import tool_parser, arg_no
 accounts = objects.get('accounts')
 settings = Profiles().current()
 user_rdn = settings.get('user_rdn')
+
 
 def add_user(args, account_type):
     user_data = util.merge(accounts.get(account_type), args)
@@ -51,6 +50,7 @@ def add_user(args, account_type):
     else:
         print "Account type %s is not exactly known." % account_type
         sys.exit(1)
+
 
 def edit_user(args):
     replacable_attrs = ['uidnumber', 'gidnumber', 'sn', 'cn', 'givenname',
@@ -96,23 +96,28 @@ def edit_user(args):
 
     user.commit_changes()
 
+
 def handle_types(args):
     if args.get('list_types'):
         print "Available account types:"
         for acc_type in sorted(accounts):
             print "  %s" % acc_type
 
+
 def rename_user(args):
     user = User(args.get('name'), bind=True)
     user.rename(args.get('newName'))
+
 
 def retire_user(name):
     user = User(name, bind=True)
     user.retire()
 
+
 def remove_user(name):
     user = User(name, bind=True)
     user.remove()
+
 
 def show_user(args):
     names = util.flatten(args.get('name'))
@@ -125,8 +130,8 @@ def show_user(args):
         search = tree.search(search_filter=(query % (user_rdn, name)), attributes=attrs)
         user = User(name)
         for item in search:
-            groups = { 'groups': sorted(util.flatten([group for group in user.find_groups()])) }
-            account = { name: util.merge(dict(item), groups) }
+            groups = {'groups': sorted(util.flatten([group for group in user.find_groups()]))}
+            account = {name: util.merge(dict(item), groups)}
             print yaml.safe_dump(account, allow_unicode=True, default_flow_style=False)
 
 
