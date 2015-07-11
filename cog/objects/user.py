@@ -48,7 +48,7 @@ class User(object):
 
     def user_exists(method):
         """
-        Make sure that you're operating on an existing object."
+        Make sure that you're operating on an existing object.
         """
         @wraps(method)
         def _user_exists(self, *args, **kwargs):

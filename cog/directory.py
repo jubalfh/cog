@@ -158,7 +158,7 @@ class Entry(cidict):
 class Tree(object):
     __metaclass__ = util.Singleton
 
-    def  __init__(self):
+    def __init__(self):
         """
         Get an LDAP directory handle, open (preferably) encrypted connection.
         """
