@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2013, Activision Publishing, Inc.
+# Copyright (c) 2014, 2015 Miroslaw Baran <miroslaw+p+cog@makabra.org>
 
 # the cog project is free software under 3-clause BSD licence
 # see the LICENCE file in the project root for copying terms
@@ -142,7 +143,7 @@ def merge(d1, d2):
     Merge two dictionaries recursively. Merge the lists embedded within
     dictionary at the same positions too (with caveats).
     """
-    for k1, v1 in d1.iteritems():
+    for k1, v1 in d1.items():
         if k1 not in d2:
             d2[k1] = v1
         elif isinstance(v1, list):
@@ -152,16 +153,16 @@ def merge(d1, d2):
     return d2
 
 
-def apply_to(dct, f):
+def apply_to(d, f):
     """
     Apply a function to dictionary-like object values, recursively.
     """
-    for key in dct:
-        if isinstance(dct[key], dict):
-            dct[key] = apply_to(dct.get(key), f)
+    for k in d:
+        if isinstance(d[k], dict):
+            d[k] = apply_to(d.get(k), f)
         else:
-            dct[key] = f(dct[key])
-    return dct
+            d[k] = f(d[k])
+    return d
 
 
 class Singleton(type):

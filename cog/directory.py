@@ -120,12 +120,12 @@ class Entry(cidict):
     def __init__(self, dn, attrs=None, use_dn=False):
         super(Entry, self).__init__()
         if attrs:
-            for attr, values in attrs.iteritems():
+            for attr, values in attrs.items():
                 self.append(attr, values)
         if use_dn:
             for rdn_elements in ldap.dn.explode_rdn(dn):
                 rdn_attr, rdn_value = rdn_elements.split('=')
-                self.replace(rdn_attr, [rdn_value])
+                self.replace(rdn_attr, rdn_value)
         self.dn = dn
 
     def replace(self, attr, values):
