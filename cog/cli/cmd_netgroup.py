@@ -1,24 +1,46 @@
-# -*- coding: utf-8 -*-
+# coding: utf-8
 
 # Copyright (c) 2013, Activision Publishing, Inc.
+# Copyright (c) 2014, 2015 Miroslaw Baran <miroslaw+p+cog@makabra.org>
 
 # the cog project is free software under 3-clause BSD licence
 # see the LICENCE file in the project root for copying terms
 
 
+import os
 import sys
+import click
 import cog.util as util
 import cog.directory as dir
-from cog.objects.netgroup import Netgroup
-from cog.config import objects, Profiles
+#from cog.objects.netgroup import Netgroup
+#from cog.config import objects, Profiles
+from cog.cmd import pass_context, prep_args, CogCLI
 
-from netgroup_argparser import tool_parser, arg_no
 
-netgroups = objects.get('netgroups')
-settings = Profiles().current()
+#netgroups = objects.get('netgroups')
+#settings = Profiles().current()
 
-def add_netgroup(args, netgroup_type):
-    netgroup_data = util.merge(netgroups.get(netgroup_type), args)
+
+@click.group()
+@pass_context
+def cli(ctx):
+    """Does things."""
+
+
+@cli.command(name="add", help="add a netgroup")
+@click.argument("cn", metavar="[netgroup name]", required=1)
+@click.option("-t", "--type", "nisNetgroupType", default='generic',
+        metavar="[netgroup type]")
+@click.option("--description", "description", metavar="[netgroup description]")
+@click.option("-T", "--with-triples", "nisNetgroupTriple",
+        multiple=True, metavar="[netgroup triples to add]")
+@click.option("-M", "--with-members", "memberNisNetgroup",
+        multiple=True, metavar="[netgroup member groups to add]")
+@pass_context
+@prep_args
+def add(ctx, **args):
+    """add a netgroup"""
+    netgroup_data = util.merge(netgroups.get(args.pop('nisNetgroupType')), args)
     if netgroup_type in netgroups.keys():
         cn = netgroup_data.get('cn')
         path = netgroup_data.pop('path', None)
@@ -31,11 +53,25 @@ def add_netgroup(args, netgroup_type):
         print "Netgroup type %s is not exactly known." % netgroup_type
         sys.exit(1)
 
-def edit_netgroup(args):
+
+@cli.command(name="edit", help="edit a netgroup")
+@click.argument("cn", metavar="[group name]", required=1)
+@click.option("--add-triple", "addNisNetgroupTriple", multiple=True,
+        metavar="[triples to add]")
+@click.option("--del-triple", "delNisNetgroupTriple", multiple=True,
+        metavar="[triples to remove]")
+@click.option("--add-member", "addmemberNisNetgroup", multiple=True,
+        metavar="[netgroup members to add]")
+@click.option("--del-member", "delmemberNisNetgroup", multiple=True,
+        metavar="[netgroup members to remove]")
+@click.option("--description", "description", metavar="[netgroup description]")
+@pass_context
+@prep_args
+def edit(ctx, **args):
+    """edit a netgroup"""
     netgroup = Netgroup(args.pop('cn'))
-    for attr, val in args.iteritems():
+    for attr, val in args.items():
         attr = attr.lower()
-        print attr, val
         if attr == 'description':
             netgroup.set_description(val)
         elif attr == 'addnisnetgrouptriple':
@@ -46,36 +82,27 @@ def edit_netgroup(args):
             netgroup.add_member(val)
         elif attr == 'delmembernisnetgroup':
             netgroup.del_member(val)
-    print netgroup.data
     netgroup.commit_changes()
 
-def rename_netgroup(args):
+
+@cli.command(name="rename", help="change a netgroup name")
+@click.argument("cn", metavar="[netgroup name]", required=1)
+@click.option("-n", "--new-name", "newCn", metavar="[new netgroup name]",
+        required=1)
+@pass_context
+@prep_args
+def rename(ctx, **args):
+    """change netgroup name"""
     netgroup = Netgroup(args.get('cn'))
     netgroup.rename(args.get('newCn'))
 
-def remove_netgroup(cn):
+
+@cli.command(name="remove", help="remove a netgroup")
+@click.argument("cn", metavar="[netgroup name]", required=1)
+@pass_context
+@prep_args
+def remove(ctx, **args):
+    """remove a netgroup"""
     netgroup = Netgroup(cn)
     netgroup.remove()
 
-def main():
-    if arg_no < 2 or sys.argv[1] in ['-h', '--help']:
-        print tool_parser.format_help()
-        sys.exit(1)
-
-    args = dict((k, v) for k, v in vars(tool_parser.parse_args()).iteritems() if v is not None)
-    command = args.pop('command')
-    netgroup_type = args.pop('netgroup_type', 'generic')
-
-    if command == 'add':
-        add_netgroup(args, netgroup_type)
-    elif command == 'edit':
-        edit_netgroup(args)
-    elif command == 'rename':
-        rename_netgroup(args)
-    elif command == 'remove':
-        remove_netgroup(args.get('cn'))
-
-    sys.exit(0)
-
-if __name__ == "__main__":
-    main()

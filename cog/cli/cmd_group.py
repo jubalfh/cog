@@ -1,27 +1,44 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2013, Activision Publishing, Inc.
+# Copyright (c) 2014, 2015 Miroslaw Baran <miroslaw+p+cog@makabra.org>
 
 # the cog project is free software under 3-clause BSD licence
 # see the LICENCE file in the project root for copying terms
 
-
+import os
 import sys
-import getpass
-import argparse
 import yaml
+import click
 import cog.util as util
 import cog.directory as dir
-from cog.objects.group import Group
-from cog.config import objects, Profiles
+#from cog.objects.group import Group
+#from cog.config import objects, Profiles
+from cog.cmd import pass_context, prep_args, CogCLI
 
-from group_argparser import tool_parser, arg_no
+#groups = objects.get('groups')
+#settings = Profiles().current()
 
-groups = objects.get('groups')
-settings = Profiles().current()
 
-def add_group(args, group_type):
-    group_data = util.merge(groups.get(group_type), args)
+# dispatcher
+@click.group()
+@pass_context
+def cli(ctx):
+    """Does things."""
+
+
+@cli.command(name="add", help="add a POSIX group")
+@click.argument("cn", metavar="[group name]")
+@click.option("-t", "--type", "groupType", metavar="[type of group]",
+        default="generic", type=click.Choice(['generic', 'resource']))
+@click.option("--gid-number", "gidNumber", metavar="[group id number]")
+@click.option("-u", "--with-uid", "memberUid", multiple=True, metavar="[users to add]")
+@click.option("--description", "description", metavar="[group description]")
+@pass_context
+@prep_args
+def add(ctx, **args):
+    """add a POSIX group"""
+    group_data = util.merge(groups.get(args.pop('groupType')), args)
     if group_type in groups.keys():
         cn = group_data.get('cn')
         path = group_data.pop('path', None)
@@ -36,9 +53,21 @@ def add_group(args, group_type):
         print "group type %s is not exactly known." % group_type
         sys.exit(1)
 
-def edit_group(args):
+
+@cli.command(name="edit", help="edit a POSIX group")
+@click.argument("cn", metavar="[group name]", required=1)
+@click.option("--add-uid", "addMemberUid", multiple=True,
+        metavar="[users to add]")
+@click.option("--del-uid", "delMemberUid", multiple=True,
+        metavar="[users to remove]")
+@click.option("--gid-number", "gidNumber", metavar="[new group ID]")
+@click.option("--description", "description", metavar="[group description]")
+@pass_context
+@prep_args
+def edit(ctx, **args):
+    """edit a POSIX group"""
     group = Group(args.pop('cn'))
-    for attr, val in args.iteritems():
+    for attr, val in args.items():
         attr = attr.lower()
         if attr == 'description':
             group.set_description(val)
@@ -48,43 +77,38 @@ def edit_group(args):
             group.del_uid(val)
     group.commit_changes()
 
-def rename_group(args):
+
+@cli.command(name="rename", help="change group name")
+@click.argument("cn", metavar="[group name]", required=1)
+@click.option("-n", "--new-name", "newCn", metavar="[new group name]",
+        required=1)
+@pass_context
+@prep_args
+def rename(ctx, **args):
+    """change group name"""
     group = Group(args.get('cn'))
     group.rename(args.get('newCn'))
 
-def remove_group(cn):
+
+@cli.command(name="remove", help="remove group from directory")
+@click.argument("cn", metavar="[group name]", required=1)
+@pass_context
+@prep_args
+def remove(ctx, **args):
+    """remove group from directory"""
     group = Group(cn)
     group.remove()
 
-def show_group(cn):
+
+@cli.command(name="show", help="show group details")
+@click.argument("cn", metavar="[group name]", required=1)
+@pass_context
+@prep_args
+def show(ctx, **args):
+    """show group details"""
     group = Group(cn)
     if group.exists:
         del(group.data['objectClass'])
         data = dict(group.data)
         print yaml.safe_dump({ cn: data }, allow_unicode=True, default_flow_style=False)
 
-
-def main():
-    if arg_no < 2 or sys.argv[1] in ['-h', '--help']:
-        print tool_parser.format_help()
-        sys.exit(1)
-
-    args = dict((k, v) for k, v in vars(tool_parser.parse_args()).iteritems() if v is not None)
-    command = args.pop('command')
-    group_type = args.pop('group_type', 'generic')
-
-    if command == 'add':
-        add_group(args, group_type)
-    elif command == 'edit':
-        edit_group(args)
-    elif command == 'rename':
-        rename_group(args)
-    elif command == 'remove':
-        remove_group(args.get('cn'))
-    elif command == 'show':
-        show_group(args.get('cn'))
-
-    sys.exit(0)
-
-if __name__ == "__main__":
-    main()
