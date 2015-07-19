@@ -5,7 +5,7 @@
 # the cog project is free software under 3-clause BSD licence
 # see the LICENCE file in the project root for copying terms
 
-# miscellaneous utility functions, mostly borrowed
+# miscellaneous utility functions, some of them borrowed
 
 import os
 import pwd
@@ -14,27 +14,47 @@ import random
 import keyring
 import getpass
 import sshpubkeys
-
 from sshpubkeys import SSHKey
 from itertools import chain
+from functools import wraps
 from passlib.hash import sha512_crypt
 
 
-def read_ssh_key(path):
+# encoding conversion functions
+def to_utf8(obj):
     """
-    Read an SSH key given path, bail out when bad. Limit the keyfile length.
+    Convert non-utf-8 bytestream or a unicode string to a utf-8 bytestream.
     """
-    key = None
-    try:
-        with open(path) as key_fh:
-            key = SSHKey(key_fh.read(262144)).keydata.strip()
-    except IOError as io_exc:
-        print io_exc.message
-    except sshpubkeys.InvalidKeyException as key_exc:
-        print key_exc.message
-    return key
+    local_encoding = sys.stdin.encoding
+    if isinstance(obj, unicode):
+        obj = obj.encode('utf-8')
+    elif isinstance(obj, basestring) and local_encoding != 'utf-8':
+        obj = obj.decode(local_encoding).encode('utf-8')
+    return obj
 
 
+def to_unicode(obj, encoding='utf-8'):
+    """
+    Convert bytestream to unicode.
+    """
+    if isinstance(obj, basestring):
+        if not isinstance(obj, unicode):
+            obj = unicode(obj, encoding)
+    return obj
+
+
+def ensure_utf8(f):
+    """
+    Decorator - forces the wrapped function to return utf-8 bytestream.
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        return to_utf8(f(*args, **kwargs))
+    return decorated
+
+
+# password & system helpers
+@ensure_utf8
 def randomized_string(size=16, chars=string.letters + string.digits + string.punctuation):
     """
     Generate randomized string using printable character. (Not using
@@ -44,9 +64,10 @@ def randomized_string(size=16, chars=string.letters + string.digits + string.pun
     return ''.join(random.choice(chars) for x in range(size))
 
 
+@ensure_utf8
 def make_pass(passwd=None):
     """
-    generate password using SHA-512 method, randomized salt and randomized
+    Generate password using SHA-512 method, randomized salt and randomized
     number of rounds.
     """
     if passwd is None:
@@ -73,10 +94,31 @@ def get_pass(username, service, prompt, use_keyring=False):
     return password
 
 
+@ensure_utf8
+def read_ssh_key(path):
+    """
+    Read an SSH key given path, bail out when bad. Limit the keyfile length.
+    """
+    key = None
+    try:
+        with open(path) as key_fh:
+            key = SSHKey(key_fh.read(262144)).keydata.strip()
+    except IOError as io_exc:
+        print io_exc.message
+    except sshpubkeys.InvalidKeyException as key_exc:
+        print key_exc.message
+    return key
+
+
+@ensure_utf8
 def get_current_uid():
+    """
+    Return the owner of the cog process.
+    """
     return pwd.getpwuid(os.getuid()).pw_name
 
 
+# data structure helpers
 def loop_on(input):
     if isinstance(input, basestring):
         yield input
@@ -108,6 +150,18 @@ def merge(d1, d2):
         elif isinstance(v1, dict):
             merge(v1, d2[k1])
     return d2
+
+
+def apply_to(dct, f):
+    """
+    Apply a function to dictionary-like object values, recursively.
+    """
+    for key in dct:
+        if isinstance(dct[key], dict):
+            dct[key] = apply_to(dct.get(key), f)
+        else:
+            dct[key] = f(dct[key])
+    return dct
 
 
 class Singleton(type):
