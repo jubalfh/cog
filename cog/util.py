@@ -43,18 +43,7 @@ def to_unicode(obj, encoding='utf-8'):
     return obj
 
 
-def ensure_utf8(f):
-    """
-    Decorator - forces the wrapped function to return utf-8 bytestream.
-    """
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        return to_utf8(f(*args, **kwargs))
-    return decorated
-
-
 # password & system helpers
-@ensure_utf8
 def randomized_string(size=16, chars=string.letters + string.digits + string.punctuation):
     """
     Generate randomized string using printable character. (Not using
@@ -64,7 +53,6 @@ def randomized_string(size=16, chars=string.letters + string.digits + string.pun
     return ''.join(random.choice(chars) for x in range(size))
 
 
-@ensure_utf8
 def make_pass(passwd=None):
     """
     Generate password using SHA-512 method, randomized salt and randomized
@@ -94,7 +82,6 @@ def get_pass(username, service, prompt, use_keyring=False):
     return password
 
 
-@ensure_utf8
 def read_ssh_key(path):
     """
     Read an SSH key given path, bail out when bad. Limit the keyfile length.
@@ -110,7 +97,6 @@ def read_ssh_key(path):
     return key
 
 
-@ensure_utf8
 def get_current_uid():
     """
     Return the owner of the cog process.
