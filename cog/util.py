@@ -9,6 +9,7 @@
 # miscellaneous utility functions, some of them borrowed
 
 import os
+import sys
 import pwd
 import string
 import random

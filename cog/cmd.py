@@ -9,6 +9,7 @@
 import os
 import sys
 import click
+from cog.util import loop_on, to_utf8
 #from cog.config import Profiles, make_user_config
 
 
@@ -17,15 +18,17 @@ cmd_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cli')
 
 
 def prep_args(f):
-    """Cleans up values returned by click."""
+    """Massages data returned by click for further consumption"""
     def _cleanup(d):
         for k, v in d.items():
             if not v:
                 del(d[k])
             elif isinstance(v, dict):
-                d[k] = dict_clean(v)
-            elif isinstance(v, tuple):
-                d[k] = list(v)
+                d[k] = _cleanup(v)
+            elif isinstance(v, tuple) or isinstance(v, list):
+                d[k] = list(to_utf8(e) for e in v)
+            else:
+                d[k] = to_utf8(v)
         return d
     def _prep_args(*ctx, **args):
         args = _cleanup(args)

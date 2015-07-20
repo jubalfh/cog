@@ -13,10 +13,10 @@ import click
 import cog.util as util
 import cog.directory as dir
 #from cog.objects.group import Group
-#from cog.config import objects, Profiles
+from cog.config import objects, Profiles
 from cog.cmd import pass_context, prep_args, CogCLI
 
-#groups = objects.get('groups')
+groups = objects.get('groups')
 #settings = Profiles().current()
 
 
@@ -39,18 +39,19 @@ def cli(ctx):
 def add(ctx, **args):
     """add a POSIX group"""
     group_data = util.merge(groups.get(args.pop('groupType')), args)
-    if group_type in groups.keys():
+
+    if groupType in groups.keys():
         cn = group_data.get('cn')
         path = group_data.pop('path', None)
         requires = group_data.pop('requires', None)
         if not group_data.get('gidNumber') and 'gidNumber' in requires:
             group_data['gidNumber'] = dir.get_probably_unique_gidnumber()
-        dn = "cn=%s,%s" % (cn, dir.get_group_base(group_type))
+        dn = "cn=%s,%s" % (cn, dir.get_group_base(groupType))
         group_entry = dir.Entry(dn=dn, attrs=group_data)
         newgroup = Group(cn, group_entry)
         newgroup.add()
     else:
-        print "group type %s is not exactly known." % group_type
+        print "group type %s is not exactly known." % groupType
         sys.exit(1)
 
 
