@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2013, Activision Publishing, Inc.
+# Copyright (c) 2014, 2015 Miroslaw Baran <miroslaw+p+cog@makabra.org>
 
 # the cog project is free software under 3-clause BSD licence
 # see the LICENCE file in the project root for copying terms
@@ -16,7 +17,7 @@ import ldap.modlist as modlist
 
 import cog.directory as dir
 import cog.util as util
-from cog.config import Profiles
+from cog.config.settings import Profiles
 
 settings = Profiles().current()
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2013, Activision Publishing, Inc.
+# Copyright (c) 2014, 2015 Miroslaw Baran <miroslaw+p+cog@makabra.org>
 
 # the cog project is free software under 3-clause BSD licence
 # see the LICENCE file in the project root for copying terms
@@ -17,11 +18,13 @@ import ldap
 import ldap.modlist as modlist
 
 import cog.directory as dir
-import cog.util as util
+import cog.util.passwd as passwd
 from cog.objects.group import Group
+from cog.config.settings import Profiles
+from cog.config.templates import Objects
 
-from cog.config import objects, Profiles
-accounts = objects.get('accounts')
+
+accounts = Objects().templates('account')
 settings = Profiles().current()
 
 class User(object):
@@ -114,7 +117,7 @@ class User(object):
     def set_password(self, password=None):
         if not password:
             password = getpass.getpass('enter new LDAP password for %s: ' % self.name)
-        self.data.replace('userPassword', util.make_pass(password))
+        self.data.replace('userPassword', passwd.make_sha512(password))
         self.tree.modify(self.data)
 
     @user_exists
@@ -129,7 +132,7 @@ class User(object):
 
     @user_exists
     def retire(self):
-        self.set_password(util.randomized_string(32))
+        self.set_password(passwd.random_string(32))
         self.data.replace('gidNumber', accounts.get('retired').get('gidNumber'))
         self.tree.modify(self.data)
         self.tree.move(self.data.dn, new_parent=dir.get_account_base('retired'))
