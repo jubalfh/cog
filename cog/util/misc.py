@@ -8,18 +8,12 @@
 
 # miscellaneous utility functions, some of them borrowed
 
+
 import os
 import sys
 import pwd
 import string
-import random
-import keyring
-import getpass
-import sshpubkeys
-from sshpubkeys import SSHKey
 from itertools import chain
-from functools import wraps
-from passlib.hash import sha512_crypt
 
 
 # encoding conversion functions
@@ -43,60 +37,6 @@ def to_unicode(obj, encoding='utf-8'):
         if not isinstance(obj, unicode):
             obj = unicode(obj, encoding)
     return obj
-
-
-# password & system helpers
-def randomized_string(size=16, chars=string.letters + string.digits + string.punctuation):
-    """
-    Generate randomized string using printable character. (Not using
-    string.printable here because it does produce more than we can eat,
-    unfortunately.)
-    """
-    return ''.join(random.choice(chars) for x in range(size))
-
-
-def make_pass(passwd=None):
-    """
-    Generate password using SHA-512 method, randomized salt and randomized
-    number of rounds.
-    """
-    if passwd is None:
-        passwd = randomized_string(17)
-    salt = randomized_string(16, ('./' + string.letters + string.digits))
-    iterations = random.randint(40000, 80000)
-    return '{CRYPT}' + sha512_crypt.encrypt(passwd, salt=salt, rounds=iterations)
-
-
-def get_pass(username, service, prompt, use_keyring=False):
-    """
-    get a password string, either from user input or from system key/password
-    store
-    """
-    password = None
-    if use_keyring:
-        password = keyring.get_password(service, username)
-        if not password:
-            password = getpass.getpass(prompt)
-            if password:
-                keyring.set_password(service, username, password)
-    else:
-        password = getpass.getpass(prompt)
-    return password
-
-
-def read_ssh_key(path):
-    """
-    Read an SSH key given path, bail out when bad. Limit the keyfile length.
-    """
-    key = None
-    try:
-        with open(path) as key_fh:
-            key = SSHKey(key_fh.read(262144)).keydata.strip()
-    except IOError as io_exc:
-        print io_exc.message
-    except sshpubkeys.InvalidKeyException as key_exc:
-        print key_exc.message
-    return key
 
 
 def get_current_uid():
@@ -125,7 +65,7 @@ def flatten(list_of_lists):
     return chain.from_iterable(list_of_lists)
 
 
-def merge(d1, d2):
+def dict_merge(d1, d2):
     """
     Merge two dictionaries recursively. Merge the lists embedded within
     dictionary at the same positions too (with caveats).
@@ -136,7 +76,7 @@ def merge(d1, d2):
         elif isinstance(v1, list):
             d2[k1] = list(set(d2[k1] + v1))
         elif isinstance(v1, dict):
-            merge(v1, d2[k1])
+            dict_merge(v1, d2[k1])
     return d2
 
 

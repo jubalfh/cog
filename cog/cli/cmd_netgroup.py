@@ -10,27 +10,27 @@
 import os
 import sys
 import click
-import cog.util as util
+import yaml
 import cog.directory as dir
-#from cog.objects.netgroup import Netgroup
-#from cog.config import objects, Profiles
+from cog.objects.netgroup import Netgroup
+from cog.config.templates import Templates
+from cog.util.misc import dict_merge
 from cog.cmd import pass_context, prep_args, CogCLI
 
 
-#netgroups = objects.get('netgroups')
-#settings = Profiles().current()
+netgroups = Templates().get('netgroups')
 
 
 @click.group()
 @pass_context
 def cli(ctx):
-    """Does things."""
+    """netgroup management"""
 
 
 @cli.command(name="add", help="add a netgroup")
 @click.argument("cn", metavar="[netgroup name]", required=1)
 @click.option("-t", "--type", "nisNetgroupType", default='generic',
-        metavar="[netgroup type]")
+        type=click.Choice(netgroups.keys()))
 @click.option("--description", "description", metavar="[netgroup description]")
 @click.option("-T", "--with-triples", "nisNetgroupTriple",
         multiple=True, metavar="[netgroup triples to add]")
@@ -40,18 +40,17 @@ def cli(ctx):
 @prep_args
 def add(ctx, **args):
     """add a netgroup"""
-    netgroup_data = util.merge(netgroups.get(args.pop('nisNetgroupType')), args)
-    if netgroup_type in netgroups.keys():
-        cn = netgroup_data.get('cn')
-        path = netgroup_data.pop('path', None)
-        requires = netgroup_data.pop('requires', None)
-        dn = "cn=%s,%s" % (cn, dir.get_netgroup_base(netgroup_type))
-        netgroup_entry = dir.Entry(dn=dn, attrs=netgroup_data)
-        newnetgroup = Netgroup(cn, netgroup_entry)
-        newnetgroup.add()
-    else:
-        print "Netgroup type %s is not exactly known." % netgroup_type
-        sys.exit(1)
+    type = args.pop('nisNetgroupType')
+    data = dict_merge(netgroups.get(type), args)
+    path = data.pop('path', None)
+    cn = data.get('cn')
+    path = data.pop('path', None)
+    requires = data.pop('requires', None)
+    dn = "cn=%s,%s" % (cn, dir.get_netgroup_base(type))
+    print dn
+    netgroup_entry = dir.Entry(dn=dn, attrs=data)
+    newnetgroup = Netgroup(cn, netgroup_entry)
+    newnetgroup.add()
 
 
 @cli.command(name="edit", help="edit a netgroup")
@@ -91,10 +90,14 @@ def edit(ctx, **args):
         required=1)
 @pass_context
 @prep_args
-def rename(ctx, **args):
+def rename(ctx, cn, newCn):
     """change netgroup name"""
-    netgroup = Netgroup(args.get('cn'))
-    netgroup.rename(args.get('newCn'))
+    netgroup = Netgroup(cn)
+    if netgroup.exists:
+        netgroup.rename(args.get('newCn'))
+    else:
+        click.echo("Group %s does not exist." % cn)
+        sys.exit(1)
 
 
 @cli.command(name="remove", help="remove a netgroup")
@@ -104,5 +107,19 @@ def rename(ctx, **args):
 def remove(ctx, **args):
     """remove a netgroup"""
     netgroup = Netgroup(cn)
-    netgroup.remove()
+    if netgroup.exists:
+        netgroup.remove()
+
+
+@cli.command(name="show", help="show netgroup details")
+@click.argument("cn", metavar="[netgroup name]", required=1)
+@pass_context
+@prep_args
+def show(ctx, cn):
+    """show netgroup details"""
+    netgroup = Netgroup(cn)
+    if netgroup.exists:
+        del(netgroup.data['objectClass'])
+        data = dict(netgroup.data)
+        print yaml.safe_dump({ cn: data }, allow_unicode=True, default_flow_style=False)
 

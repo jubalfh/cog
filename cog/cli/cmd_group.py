@@ -10,52 +10,48 @@ import os
 import sys
 import yaml
 import click
-import cog.util as util
 import cog.directory as dir
-#from cog.objects.group import Group
-from cog.config import objects, Profiles
+from cog.objects.group import Group
+from cog.util.misc import dict_merge
+from cog.config.templates import Templates
 from cog.cmd import pass_context, prep_args, CogCLI
 
-groups = objects.get('groups')
-#settings = Profiles().current()
+
+groups = Templates().get('groups')
 
 
 # dispatcher
 @click.group()
 @pass_context
 def cli(ctx):
-    """Does things."""
+    """group management"""
 
-
-@cli.command(name="add", help="add a POSIX group")
+@cli.command(name="add", help="add a group to the directory")
 @click.argument("cn", metavar="[group name]")
-@click.option("-t", "--type", "groupType", metavar="[type of group]",
-        default="generic", type=click.Choice(['generic', 'resource']))
+@click.option("-t", "--type", "groupType", default="generic",
+        type=click.Choice(groups.keys()))
 @click.option("--gid-number", "gidNumber", metavar="[group id number]")
-@click.option("-u", "--with-uid", "memberUid", multiple=True, metavar="[users to add]")
+@click.option("-u", "--with-uid", "memberUid", multiple=True,
+        metavar="[users to add]")
 @click.option("--description", "description", metavar="[group description]")
 @pass_context
 @prep_args
 def add(ctx, **args):
-    """add a POSIX group"""
-    group_data = util.merge(groups.get(args.pop('groupType')), args)
-
-    if groupType in groups.keys():
-        cn = group_data.get('cn')
-        path = group_data.pop('path', None)
-        requires = group_data.pop('requires', None)
-        if not group_data.get('gidNumber') and 'gidNumber' in requires:
-            group_data['gidNumber'] = dir.get_probably_unique_gidnumber()
-        dn = "cn=%s,%s" % (cn, dir.get_group_base(groupType))
-        group_entry = dir.Entry(dn=dn, attrs=group_data)
-        newgroup = Group(cn, group_entry)
-        newgroup.add()
-    else:
-        print "group type %s is not exactly known." % groupType
-        sys.exit(1)
+    """add a group"""
+    type = args.pop('groupType')
+    data = dict_merge(groups.get(type), args)
+    cn = data.get('cn')
+    path = data.pop('path', None)
+    requires = data.pop('requires', None)
+    if not data.get('gidNumber') and 'gidNumber' in requires:
+        data['gidNumber'] = dir.get_probably_unique_gidnumber()
+    dn = "cn=%s,%s" % (cn, dir.get_group_base(type))
+    group_entry = dir.Entry(dn=dn, attrs=data)
+    newgroup = Group(cn, group_entry)
+    newgroup.add()
 
 
-@cli.command(name="edit", help="edit a POSIX group")
+@cli.command(name="edit", help="edit group details and membership")
 @click.argument("cn", metavar="[group name]", required=1)
 @click.option("--add-uid", "addMemberUid", multiple=True,
         metavar="[users to add]")
@@ -66,7 +62,7 @@ def add(ctx, **args):
 @pass_context
 @prep_args
 def edit(ctx, **args):
-    """edit a POSIX group"""
+    """edit group"""
     group = Group(args.pop('cn'))
     for attr, val in args.items():
         attr = attr.lower()
@@ -95,7 +91,7 @@ def rename(ctx, **args):
 @click.argument("cn", metavar="[group name]", required=1)
 @pass_context
 @prep_args
-def remove(ctx, **args):
+def remove(ctx, cn):
     """remove group from directory"""
     group = Group(cn)
     group.remove()
@@ -105,7 +101,7 @@ def remove(ctx, **args):
 @click.argument("cn", metavar="[group name]", required=1)
 @pass_context
 @prep_args
-def show(ctx, **args):
+def show(ctx, cn):
     """show group details"""
     group = Group(cn)
     if group.exists:

@@ -10,14 +10,13 @@
 import os
 import sys
 import click
-#import cog.util as util
-#import cog.directory as dir
-#from cog.objects.netgroup import Netgroup, make_triple
-#from cog.config import objects, Profiles
+import cog.directory as dir
+from cog.objects.netgroup import Netgroup, make_triple
+from cog.util.misc import dict_merge
+from cog.config.templates import Templates
 from cog.cmd import pass_context, prep_args, CogCLI
 
-#netgroups = objects.get('netgroups')
-#settings = Profiles().current()
+netgroups = Templates().get('netgroups')
 access_levels = dict(zip(['denied', 'granted', 'admin'],
                          ['denied', 'granted', 'privileged']))
 
@@ -27,7 +26,7 @@ def get_access_group(name, priv_level):
     Gets a netgroup handle. Creates the group when necessary.
     """
     group_type = 'security'
-    group_data = util.merge(netgroups.get(group_type), {})
+    group_data = dict_merge(netgroups.get(group_type), {})
     path = group_data.pop('path')
     requires = group_data.pop('requires')
     group_name = '%s-%s' % (name, priv_level)
@@ -54,61 +53,62 @@ def manage_access(args, priv_level):
 @click.group()
 @pass_context
 def cli(ctx):
-    """Does things."""
-    ctx.log("chuj")
+    """access policy management"""
 
 
-@cli.command(name="grant", help="grant access to user(s) at specified host(s)")
+@cli.command(name="grant", help="grant access to users")
 @click.option("-P", "--privileged", "privileged", is_flag=True,
         help="make the access privileged")
 @click.option("-h", "--on-host", "services", multiple=True,
-        metavar="[host name]")
+        metavar="[name]", help="host name")
 @click.option("-c", "--on-cluster", "services", multiple=True,
-        metavar="[cluster name]")
+        metavar="[name]", help="cluster name")
 @click.option("-s", "--on-service", "services", multiple=True,
-        metavar="[service short name]")
+        metavar="[name]", help="service name")
 @click.option("-t", "--to-tagged", "services", multiple=True,
-        metavar="[tag name]")
-@click.option("-u", "--to-user", "uid", multiple=True, metavar="[user name]")
+        metavar="[name]", help="tag name")
+@click.option("-u", "--to-user", "uid", multiple=True,
+        metavar="[name]", help="user name")
 @pass_context
 @prep_args
 def grant(ctx, **args):
-    """grant access to user(s) at specified host(s)"""
-    priv_level = 'admin' if args.pop('privileged') else 'granted'
+    """access grants"""
+    priv_level = 'admin' if args.pop('privileged', None) else 'granted'
     manage_access(args, priv_level)
 
 
-@cli.command(name="deny", help="deny access to user(s) at specified host(s)")
+@cli.command(name="deny", help="deny access to users")
 @click.option("-h", "--on-host", "services", multiple=True,
-        metavar="[host name]")
-@click.option("-s", "--on-service", "services", multiple=True,
-        metavar="[service short name]")
+        metavar="[name]", help="host name")
 @click.option("-c", "--on-cluster", "services", multiple=True,
-        metavar="[cluster name]")
+        metavar="[name]", help="cluster name")
+@click.option("-s", "--on-service", "services", multiple=True,
+        metavar="[name]", help="service name")
 @click.option("-t", "--to-tagged", "services", multiple=True,
-        metavar="[tag name]")
-@click.option("-u", "--to-user", "uid", multiple=True, metavar="[user name]")
+        metavar="[name]", help="tag name")
+@click.option("-u", "--to-user", "uid", multiple=True,
+        metavar="[name]", help="user name")
 @pass_context
 @prep_args
 def deny(ctx, **args):
-    """deny access to user(s) at specified host(s)"""
+    """access denials"""
     priv_level = 'denied'
     manage_access(args, priv_level)
 
 
 @cli.command(name="revoke", help="revoke access grant or denial")
 @click.option("-l", "--revoke-level", "revoke_levels", multiple=True,
-        type=click.Choice(['granted', 'denied', 'privileged']),
-        metavar="[access level]")
+        type=click.Choice(['granted', 'denied', 'privileged']))
 @click.option("-h", "--on-host", "services", multiple=True,
-        metavar="[host name]")
+        metavar="[name]", help="host name")
 @click.option("-c", "--on-cluster", "services", multiple=True,
-        metavar="[cluster name]")
+        metavar="[name]", help="cluster name")
 @click.option("-s", "--on-service", "services", multiple=True,
-        metavar="[service name]")
+        metavar="[name]", help="service name")
 @click.option("-t", "--from-tagged", "services", multiple=True,
-        metavar="[tag name]")
-@click.option("-u", "--from-user", "uid", multiple=True, metavar="[user name]")
+        metavar="[name]", help="tag name")
+@click.option("-u", "--from-user", "uid", multiple=True,
+        metavar="[name]", help="user name")
 @pass_context
 @prep_args
 def revoke(ctx, **args):
@@ -123,14 +123,14 @@ def revoke(ctx, **args):
                     access_group.commit_changes()
 
 
-@cli.command(name="show", help="show access details for user(s) or host(s)")
-@click.argument("query", nargs=-1, metavar="[hosts, users or services]", required=1)
+@cli.command(name="show", help="show access details for users or systems")
+@click.argument("query", nargs=-1, metavar="[name (name...)]", required=1)
 @click.option("-t", "--type", "query_type", default='user',
         type=click.Choice(['user', 'host', 'service', 'cluster', 'tag']))
 @pass_context
 @prep_args
 def show(ctx, **args):
-    """show access details for user(s) or host(s)"""
+    """show access details"""
     tree = dir.Tree()
     if args.get('query_type') in ['host', 'cluster', 'service', 'tag']:
         # make sure that the netgroup actually contains any triples:

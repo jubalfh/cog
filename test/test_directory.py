@@ -4,15 +4,15 @@ import unittest
 sys.path.append("../cog")
 
 from cog import directory
-from cog.config import Profiles
+from cog.config.settings import Profiles
 from mock import patch, Mock
 from random import randint
 
-settings = Profiles().current()
-min_uidnumber = settings.get('min_uidnumber')
-max_uidnumber = settings.get('max_uidnumber')
-min_gidnumber = settings.get('min_gidnumber')
-max_gidnumber = settings.get('max_gidnumber')
+settings = Profiles()
+min_uidnumber = settings.min_uidnumber
+max_uidnumber = settings.max_uidnumber
+min_gidnumber = settings.min_gidnumber
+max_gidnumber = settings.max_gidnumber
 test_uidnumber = randint(min_uidnumber, max_uidnumber)
 test_gidnumber = randint(min_gidnumber, max_gidnumber)
 
