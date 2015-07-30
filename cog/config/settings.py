@@ -10,6 +10,7 @@
 
 import os
 import sys
+import shutil
 
 from pprint import pprint
 from click import get_app_dir
@@ -51,6 +52,7 @@ class Profiles(object):
         self.store = dict()
         self.cfg_dirs = [pathjoin(dirname(progpath), 'etc', self.progname)]
         if user_config:
+            self.make_conf()
             self.cfg_dirs.append(get_app_dir(self.progname, force_posix=True))
         self.cfg_files = [pathjoin(cfg_dir, 'settings')
                           for cfg_dir in self.cfg_dirs if isdir(cfg_dir)]
@@ -63,6 +65,15 @@ class Profiles(object):
 
     def __getattr__(self, key):
         return self.store.get(key, None)
+
+    def make_conf(self):
+        appdir = get_app_dir(self.progname, force_posix=True)
+        if not os.path.exists(appdir):
+            os.makedirs(appdir, mode=0750)
+            os.makedirs(pathjoin(appdir, 'templates.d'), mode=0750)
+            shutil.copyfile(
+                pathjoin(self.cfg_dirs[0], 'examples/settings.local'),
+                pathjoin( appdir, 'settings'))
 
     def list(self):
         return self.profiles.keys()
