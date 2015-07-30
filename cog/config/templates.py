@@ -39,18 +39,16 @@ class Templates(dict):
     @staticmethod
     def expand_inheritances(templates):
         """Expand inheritances in object templates."""
-        # FIXME: v. naive approach, enforces default inheritance if loop
-        # detected, should we perhaps scream and throw an exception
-        # instead?
+        # FIXME: v. naive approach. Still.
         expanded = dict()
         for type, data in templates.items():
             expanded.update({type: {}})
             for name, template in data.items():
                 desc = template.get(
                     'desc', '{} template for {} object'.format(name, type))
-                attrs = template.get('default')
-                parents = ['generic']
+                attrs = template.get('default', None)
                 parent = template.get('inherits', None)
+                parents = []
                 while True:
                     if parent and parent not in parents:
                         parents.append(parent)
