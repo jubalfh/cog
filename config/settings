@@ -1,10 +1,15 @@
 %YAML 1.0
 ---
+# Name of the default profile; profiles are just yaml dictionaries; the
+# local profile below lists all available options with their default
+# settings.
 profile: local
-user_config: true
 
+# profile definition
 local:
   description: an example profile
+
+  # basic directory settings
   base_dn: dc=playground,dc=tree
   user_dn: ou=Accounts,dc=playground,dc=tree
   group_dn: ou=Groups,dc=playground,dc=tree
@@ -14,4 +19,26 @@ local:
   ldap_cacertfile: /path/to/ca_certificate
   bind_dn: cn=root,dc=playground,dc=tree
   # bind_pass: password
+
+
+  # These are the built-in defaults that cog comes with, see
+  # cog/config/settings.py
+
+  # uid/gid limits, can be overridden in templates
+  # min_uidnumber': '420000'
+  # max_uidnumber': '1000000'
+  # min_gidnumber': '420000'
+  # max_gidnumber': '1000000'
+
+  # advanced settings below: change at your own peril
+
+  # basic queries, can be redefined for special profiles
+  # user_query': '(&(%s=%s)(|(objectClass=posixAccount)(objectClass=inetOrgPerson)))'
+  # group_query': '(&(cn=%s)(objectClass=posixGroup))'
+  # netgroup_query': '(&(cn=%s)(objectClass=nisNetgroup))'
+
+  # rfc2307bis groups settings
+  # rfc2307bis_group_object_class': 'groupOfMembers'
+  # rfc2307bis_group_member_attribute': 'member'
+  # use_memberuid': true
 

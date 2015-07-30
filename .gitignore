@@ -9,6 +9,7 @@
 dist
 build
 eggs
+.eggs
 parts
 bin
 var
@@ -36,3 +37,6 @@ nosetests.xml
 
 # rope
 .ropeproject
+
+# pycharm
+.idea

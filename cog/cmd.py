@@ -6,75 +6,85 @@
 # the cog project is free software under 3-clause BSD licence
 # see the LICENCE file in the project root for copying terms
 
-import sys
+
 import os
-import shutil
-import argparse
-from importlib import import_module
-from cog.config import Profiles, make_user_config
-
-path = os.path.dirname(os.path.abspath(__file__))
-
-
-def find_subcommands():
-    for filename in os.listdir(path + os.sep + 'cli'):
-        name, ext = os.path.splitext(filename)
-        if ext.endswith('.py') and not (name.endswith('_argparser') or name == '__init__'):
-            yield name
+import sys
+import click
+from pprint import pprint
+from cog.util.misc import loop_on, to_utf8
+from cog.config.settings import Profiles
 
 
-def run(command):
-    module = 'cog.cli.%s' % command
-    command = import_module(module)
-    sys.exit(command.main())
+CONTEXT = dict(auto_envvar_prefix='COG_')
+cmd_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cli')
+settings = Profiles()
 
 
-def usage(commands, profiles):
-    profile_list = ('%s and %s' % (', '.join(profiles[:-1]), profiles[-1]) if
-                    len(profiles) > 1 else profiles[0])
-    command_list = ('%s and %s' % (', '.join(commands[:-1]), commands[-1]) if
-                    len(commands) > 1 else commands[0])
+def prep_args(f):
+    """Massages data returned by click for further consumption"""
+    def _cleanup(d):
+        for k, v in d.items():
+            if not v:
+                del(d[k])
+            elif isinstance(v, dict):
+                d[k] = _cleanup(v)
+            elif isinstance(v, tuple) or isinstance(v, list):
+                d[k] = list(to_utf8(e) for e in v)
+            else:
+                d[k] = to_utf8(v)
+        return d
 
-    print 'cog, a flexible LDAP directory manager'
-    print
-    print 'Usage: cog [-p|--profile <profile>] [-h|--help] command [options]'
-    print '       for more details run ‘cog command --help’ and'
-    print '                            ‘cog command subcommand --help’'
-    print '       available profiles: %s.' % profile_list
-    print '       available commands: %s.' % command_list
-    print
-    print 'Command summary:'
-    parser = dict()
-    for command in commands:
-        parser[command] = __import__('cog.cli.%s_argparser' % command, globals(), locals(), ['tool_parser']).tool_parser
-        parser[command].prog = 'cog %s' % command
-        parser[command].add_help = False
-        print parser[command].format_usage()[6:-1]
-    print
+    def _prep_args(*ctx, **args):
+        args = _cleanup(args)
+        return(f(*ctx, **args))
+    return _prep_args
 
 
-def main():
-    profiles = Profiles()
-    make_user_config()
+class Context(object):
 
-    subcommands = [command for command in find_subcommands()]
+    def log(self, msg, *args):
+        """Logs a message to stderr."""
+        if args:
+            msg %= args
+        click.echo(msg, file=sys.stderr)
 
-    partial_parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        add_help=False
-    )
-    partial_parser.add_argument("-p", "--profile", choices=profiles.list(), dest="profile")
-    args, remaining = partial_parser.parse_known_args()
-    profiles.use(args.profile)
-    if remaining:
-        command = remaining.pop(0)
-        sys.argv = ['cog %s' % command] + remaining
-    if len(sys.argv) < 2:
-        usage(subcommands, profiles.list())
-    else:
-        if command in subcommands:
-            run(command)
+    def vlog(self, msg, *args):
+        """Logs a message to stderr only if verbose is enabled."""
+        if self.verbose:
+            self.log(msg, *args)
+
+
+pass_context = click.make_pass_decorator(Context, ensure=True)
+
+
+class CogCLI(click.MultiCommand):
+
+    def list_commands(self, ctx):
+        commands = []
+        for filename in os.listdir(cmd_folder):
+            if filename.endswith('.py') and filename.startswith('cmd_'):
+                commands.append(filename[4:-3])
+        commands.sort
+        return commands
+
+    def get_command(self, ctx, name):
+        try:
+            mod = __import__('cog.cli.cmd_%s' % name, None, None, ['cli'])
+        except ImportError as exc:
+            print exc
+            return
+        return mod.cli
+
+
+@click.command(cls=CogCLI, context_settings=CONTEXT)
+@click.option('-p', '--profile', 'profile', type=click.Choice(settings.list()),
+              help="connection profile")
+@pass_context
+def cli(ctx, profile):
+    """cog, a flexible manager for modestly-sized LDAP directories"""
+    if profile:
+        settings.use(profile)
+
 
 if __name__ == '__main__':
-    main()
+    cli()

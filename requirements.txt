@@ -1,6 +1,7 @@
-pbr
+click
+keyring
 passlib
+pbr
 python-ldap
 pyyaml
-keyring
 sshpubkeys

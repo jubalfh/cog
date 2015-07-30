@@ -56,12 +56,16 @@ After cloning the repository for the first time, please run `sh flow-init`
 * Python-ldap does not agree with libldap shipped with OS X Yosemite,
   using non-system build of openldap libraries for python-ldap is
   probably the best solution. If you're using Homebrew, please install
-  openldap (from the homebrew/dupes tap) before installing python-ldap.
+  openldap (from the homebrew/dupes tap), and change python-ldap's
+  setup.cfg to include /usr/local/opt/openldap/{lib,include} before any
+  other paths listed (you need to install python-ldap manually for that
+  until the paths get fixed upstream).
 
 # Known Bugs and Limitations #
 
-* cog requires locale settings that use UTF-8
-* error handling is abysmal, exceptions are thrown everywhere
+* cog requires locale settings that use UTF-8,
+* error handling is abysmal, exceptions are thrown everywhere,
+* existing tests are broken,
 
 # Testing #
 

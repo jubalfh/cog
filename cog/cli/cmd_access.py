@@ -7,27 +7,26 @@
 # see the LICENCE file in the project root for copying terms
 
 
+import os
 import sys
-import getpass
-import argparse
-import cog.util as util
+import click
 import cog.directory as dir
 from cog.objects.netgroup import Netgroup, make_triple
-from cog.config import objects, Profiles
+from cog.util.misc import dict_merge
+from cog.config.templates import Templates
+from cog.cmd import pass_context, prep_args, CogCLI
 
-from access_argparser import tool_parser, arg_no
-
-netgroups = objects.get('netgroups')
-settings = Profiles().current()
+netgroups = Templates().get('netgroups')
 access_levels = dict(zip(['denied', 'granted', 'admin'],
                          ['denied', 'granted', 'privileged']))
 
-def get_access_group(name, priv_level='granted'):
+
+def get_access_group(name, priv_level):
     """
     Gets a netgroup handle. Creates the group when necessary.
     """
     group_type = 'security'
-    group_data = util.merge(netgroups.get(group_type), {})
+    group_data = dict_merge(netgroups.get(group_type), {})
     path = group_data.pop('path')
     requires = group_data.pop('requires')
     group_name = '%s-%s' % (name, priv_level)
@@ -43,28 +42,97 @@ def get_access_group(name, priv_level='granted'):
     return access_group
 
 
-def manage_access(args, priv_level='granted'):
-    for access_object in util.flatten(args.get('services', [])):
+def manage_access(args, priv_level):
+    for access_object in args.get('services'):
         access_group = get_access_group(access_object.lower(), priv_level)
-        for uid in util.flatten(args.get('uid')):
+        for uid in args.get('uid'):
             access_group.add_triple([make_triple(None, uid, None)])
         access_group.commit_changes()
 
 
-def revoke_access(args):
+@click.group()
+@pass_context
+def cli(ctx):
+    """access policy management"""
+
+
+@cli.command(name="grant", help="grant access to users")
+@click.option("-P", "--privileged", "privileged", is_flag=True,
+        help="make the access privileged")
+@click.option("-h", "--on-host", "services", multiple=True,
+        metavar="[name]", help="host name")
+@click.option("-c", "--on-cluster", "services", multiple=True,
+        metavar="[name]", help="cluster name")
+@click.option("-s", "--on-service", "services", multiple=True,
+        metavar="[name]", help="service name")
+@click.option("-t", "--to-tagged", "services", multiple=True,
+        metavar="[name]", help="tag name")
+@click.option("-u", "--to-user", "uid", multiple=True,
+        metavar="[name]", help="user name")
+@pass_context
+@prep_args
+def grant(ctx, **args):
+    """access grants"""
+    priv_level = 'admin' if args.pop('privileged', None) else 'granted'
+    manage_access(args, priv_level)
+
+
+@cli.command(name="deny", help="deny access to users")
+@click.option("-h", "--on-host", "services", multiple=True,
+        metavar="[name]", help="host name")
+@click.option("-c", "--on-cluster", "services", multiple=True,
+        metavar="[name]", help="cluster name")
+@click.option("-s", "--on-service", "services", multiple=True,
+        metavar="[name]", help="service name")
+@click.option("-t", "--to-tagged", "services", multiple=True,
+        metavar="[name]", help="tag name")
+@click.option("-u", "--to-user", "uid", multiple=True,
+        metavar="[name]", help="user name")
+@pass_context
+@prep_args
+def deny(ctx, **args):
+    """access denials"""
+    priv_level = 'denied'
+    manage_access(args, priv_level)
+
+
+@cli.command(name="revoke", help="revoke access grant or denial")
+@click.option("-l", "--revoke-level", "revoke_levels", multiple=True,
+        type=click.Choice(['granted', 'denied', 'privileged']))
+@click.option("-h", "--on-host", "services", multiple=True,
+        metavar="[name]", help="host name")
+@click.option("-c", "--on-cluster", "services", multiple=True,
+        metavar="[name]", help="cluster name")
+@click.option("-s", "--on-service", "services", multiple=True,
+        metavar="[name]", help="service name")
+@click.option("-t", "--from-tagged", "services", multiple=True,
+        metavar="[name]", help="tag name")
+@click.option("-u", "--from-user", "uid", multiple=True,
+        metavar="[name]", help="user name")
+@pass_context
+@prep_args
+def revoke(ctx, **args):
+    """revoke access grant or denial"""
     revoke_levels = args.pop('revoke_levels', ['granted'])
     for priv_level in access_levels.keys():
         if access_levels[priv_level] in revoke_levels:
-            for access_object in util.flatten(args.get('services', [])):
+            for access_object in args.get('services'):
                 access_group = get_access_group(access_object.lower(), priv_level)
-                for uid in util.flatten(args.get('uid')):
+                for uid in args.get('uid'):
                     access_group.del_triple(make_triple(None, uid, None))
                     access_group.commit_changes()
 
 
-def show_access(args):
+@cli.command(name="show", help="show access details for users or systems")
+@click.argument("query", nargs=-1, metavar="[name (name...)]", required=1)
+@click.option("-t", "--type", "query_type", default='user',
+        type=click.Choice(['user', 'host', 'service', 'cluster', 'tag']))
+@pass_context
+@prep_args
+def show(ctx, **args):
+    """show access details"""
     tree = dir.Tree()
-    if args.get('query_type') in ['host', 'cluster', 'service']:
+    if args.get('query_type') in ['host', 'cluster', 'service', 'tag']:
         # make sure that the netgroup actually contains any triples:
         query = '(&(objectClass=nisNetgroup)(cn=%s-%s)(nisNetgroupTriple=*))'
         for priv_level in access_levels.keys():
@@ -91,29 +159,3 @@ def show_access(args):
             for priv_level in sorted(access_levels.keys()):
                 if access_object[priv_level]:
                     print "%s: %s access at %s" % (uid, access_levels[priv_level], ", ".join(sorted(access_object[priv_level])))
-
-
-def main():
-    if arg_no < 2 or sys.argv[1] in ['-h', '--help']:
-        print tool_parser.format_help()
-        sys.exit(1)
-
-    args = dict((k, v) for k, v in vars(tool_parser.parse_args()).items() if v is not None)
-    command = args.pop('command')
-    is_privileged = args.pop('privileged', False)
-    netgroup_type = args.pop('netgroup_type', 'generic')
-
-    if command in ['grant', 'deny']:
-        priv_level = 'denied'
-        if command == 'grant':
-            priv_level = 'admin' if is_privileged else 'granted'
-        manage_access(args, priv_level=priv_level)
-    elif command == 'revoke':
-        revoke_access(args)
-    elif command == 'show':
-        show_access(args)
-
-    sys.exit(0)
-
-if __name__ == '__main__':
-    main()

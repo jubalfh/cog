@@ -14,15 +14,19 @@ import ldap
 import ldap.dn
 import ldap.schema
 import ldap.modlist as modlist
+import cog.util.passwd as passwd
+
+from pprint import pprint
 from functools import wraps
 from StringIO import StringIO
-
-import cog.util as util
 from cog.cidict import cidict
-from cog.config import objects, Profiles
+from cog.util.misc import get_current_uid, loop_on, Singleton
+from cog.config.settings import Profiles
+from cog.config.templates import Templates
 
-settings = Profiles().current()
-accounts, groups, netgroups = (objects.get(section) for section in ['accounts', 'groups', 'netgroups'])
+
+accounts, groups, netgroups = (Templates().get(section) for section in ['accounts', 'groups', 'netgroups'])
+settings = Profiles()
 
 # Exceptions
 class DirectoryException(Exception):
@@ -49,9 +53,9 @@ def get_probably_unique_uidnumber():
     tree = Tree()
     # FIXME: use limits stored within directory, fall back to the full
     # directory search only if there is no other option available.
-    # return tree.increment_atomically(settings.get('user_defaults_dn'), 'uidNext')
-    max_uidnumber = settings.get('max_uidnumber')
-    min_uidnumber = settings.get('min_uidnumber')
+    # return tree.increment_atomically(settings.user_defaults_dn, 'uidNext')
+    max_uidnumber = settings.max_uidnumber
+    min_uidnumber = settings.min_uidnumber
     return str(max([int(x['uidNumber'][0]) for x in
                     tree.search(search_filter=('(&(objectClass=posixAccount)(uidNumber<=%s))' % max_uidnumber),
                                 attributes=['uidNumber'])] + [min_uidnumber]) + 1)
@@ -60,8 +64,8 @@ def get_probably_unique_uidnumber():
 def get_probably_unique_gidnumber():
     tree = Tree()
     # FIXME: use limits stored within directory!
-    max_gidnumber = settings.get('max_gidnumber')
-    min_gidnumber = settings.get('min_gidnumber')
+    max_gidnumber = settings.max_gidnumber
+    min_gidnumber = settings.min_gidnumber
     return str(max([int(x['gidNumber'][0]) for x in
                     tree.search(search_filter=('(&(objectClass=posixGroup)(gidNumber<=%s))' % max_gidnumber),
                                 attributes=['gidNumber'])] + [min_gidnumber]) + 1)
@@ -70,20 +74,20 @@ def path2rdn(path):
     path_list = ["ou=%s," % x for x in path.strip('/').split('/')[::-1] if x]
     return "".join(path_list)
 
-def get_account_base(account_type):
-    return path2rdn(accounts.get(account_type).get('path')) + settings.get('user_dn')
+def get_account_base(name):
+    return path2rdn(accounts.get(name).get('path')) + settings.user_dn
 
-def get_group_base(group_type):
-    return path2rdn(groups.get(group_type).get('path')) + settings.get('group_dn')
+def get_group_base(name):
+    return path2rdn(groups.get(name).get('path')) + settings.group_dn
 
-def get_netgroup_base(netgroup_type):
-    return path2rdn(netgroups.get(netgroup_type).get('path')) + settings.get('netgroup_dn')
+def get_netgroup_base(name):
+    return path2rdn(netgroups.get(name).get('path')) + settings.netgroup_dn
 
 def find_dn_for_uid(uid=None):
     if not uid:
-        uid = util.get_current_uid()
+        uid = get_current_uid()
     tree = Tree()
-    base_dn = settings.get('user_dn')
+    base_dn = settings.user_dn
     query = '(&(objectClass=posixAccount)(uid=%s))' % uid
     users = tree.search(base_dn, search_filter=query, attributes=['dn'])
     if len(users) > 1:
@@ -96,7 +100,7 @@ def find_dn_for_uid(uid=None):
 
 # a few schema helper functions
 def get_object_class(oc):
-    _, schema = ldap.schema.urlfetch(settings.get('ldap_uri'))
+    _, schema = ldap.schema.urlfetch(settings.ldap_uri)
     return schema.get_obj(ldap.schema.ObjectClass, oc)
 
 def is_structural(oc):
@@ -108,6 +112,9 @@ def is_abstract(oc):
 def is_auxiliary(oc):
     return get_object_class(oc).kind == 2
 
+def has_rfc2307bis():
+    oc = settings.rfc2307bis_group_object_class
+    return (is_auxiliary('posixGroup') and is_structural(oc))
 
 # Classes
 
@@ -120,28 +127,28 @@ class Entry(cidict):
     def __init__(self, dn, attrs=None, use_dn=False):
         super(Entry, self).__init__()
         if attrs:
-            for attr, values in attrs.iteritems():
+            for attr, values in attrs.items():
                 self.append(attr, values)
         if use_dn:
             for rdn_elements in ldap.dn.explode_rdn(dn):
                 rdn_attr, rdn_value = rdn_elements.split('=')
-                self.replace(rdn_attr, [rdn_value])
+                self.replace(rdn_attr, rdn_value)
         self.dn = dn
 
     def replace(self, attr, values):
-        self[attr] = list(util.loop_on(values))
+        self[attr] = list(loop_on(values))
 
     def append(self, attr, values):
-        if self.has_key(attr):
-            for value in util.loop_on(values):
+        if attr in self:
+            for value in loop_on(values):
                 if value not in self[attr]:
                     self[attr].append(value)
         else:
-            self[attr] = values
+            self.replace(attr, values)
 
     def remove(self, attr, values):
         if self.has_key(attr):
-            for value in util.loop_on(values):
+            for value in loop_on(values):
                 if value in self[attr]:
                     self[attr].remove(value)
             if not self[attr]:
@@ -156,21 +163,24 @@ class Entry(cidict):
 
 # wrapper over LDAPObject
 class Tree(object):
-    __metaclass__ = util.Singleton
+    __metaclass__ = Singleton
 
-    def  __init__(self):
+
+    def __init__(self):
         """
         Get an LDAP directory handle, open (preferably) encrypted connection.
         """
-        for opt in ['base_dn', 'ldap_uri', 'ldap_encryption', 'bind_dn',
-                    'bind_pass']:
-            self.__setattr__(opt, settings.get(opt, None))
+        self.base_dn = settings.base_dn
+        self.bind_dn = settings.bind_dn
+        self.bind_pass = settings.bind_pass
+        self.ldap_encryption = settings.ldap_encryption
+        self.ldap_uri = settings.ldap_uri
         self.bound = False
         self._connect()
         return
 
     def _connect(self):
-        cacertfile = settings.get('ldap_cacertfile')
+        cacertfile = settings.ldap_cacertfile
         self.bound = False
         self.ldap_handle = ldap.initialize(self.ldap_uri, trace_level=0, trace_file=sys.stderr)
         self.ldap_handle.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
@@ -192,10 +202,10 @@ class Tree(object):
             if not self.bind_dn:
                 self.bind_dn = find_dn_for_uid()
             if not self.bind_pass:
-                self.bind_pass = util.get_pass(self.bind_dn,
-                                              settings.get('keyring_service'),
+                self.bind_pass = passwd.get_passwd(self.bind_dn,
+                                              settings.keyring_service,
                                               "enter your LDAP password: ",
-                                              use_keyring=settings.get('use_keyring'))
+                                              use_keyring=settings.use_keyring)
                 self._reconnect()
             self.ldap_handle.simple_bind_s(self.bind_dn, self.bind_pass)
             self.bound = True
