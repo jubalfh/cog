@@ -19,54 +19,67 @@ from cog.config.settings import Profiles
 cfg = Profiles()
 
 
-def expand_inheritances(templates):
-    """Expand inheritances in object templates."""
-    # FIXME: v. naive approach, enforces default inheritance if loop
-    # detected, should we perhaps scream and throw an exception
-    # instead?
-    expanded = dict()
-    for type, data in templates.items():
-        expanded.update({type: {}})
-        for name, template in data.items():
-            desc = template.get(
-                'desc', '{} template for {} object'.format(name, type))
-            attrs = template.get('default')
-            parents = ['generic']
-            parent = template.get('inherits', None)
-            while True:
-                if parent and parent not in parents:
-                    parents.append(parent)
-                    parent = data.get(parent).get('inherits', None)
-                else:
-                    break
-            for parent in reversed(parents):
-                parent_attrs = data.get(parent).get('default')
-                attrs = dict_merge(parent_attrs, attrs)
-            expanded[type].update({name: {'attrs': attrs, 'desc': desc}})
-    return expanded
+class Template(dict):
+    def __init__(self, name, desc, limits, attrs):
+        self.name = name
+        self.desc = desc
+        self.limits = limits
+        self.update(attrs)
 
 
-class Objects(dict):
-    __metaclass__ = Singleton
+class Templates(dict):
 
     def __init__(self):
         tmpl_files = []
         for dir in cfg.cfg_dirs:
             tmpl_files.append(pathjoin(dir, 'templates.yaml'))
             tmpl_files += list_files(pathjoin(dir, 'templates.d'))
-        self.update(expand_inheritances(merge_data(*tmpl_files)))
+        self.update(self.expand_inheritances(merge_data(*tmpl_files)))
+
+    @staticmethod
+    def expand_inheritances(templates):
+        """Expand inheritances in object templates."""
+        # FIXME: v. naive approach, enforces default inheritance if loop
+        # detected, should we perhaps scream and throw an exception
+        # instead?
+        expanded = dict()
+        for type, data in templates.items():
+            expanded.update({type: {}})
+            for name, template in data.items():
+                desc = template.get(
+                    'desc', '{} template for {} object'.format(name, type))
+                attrs = template.get('default')
+                parents = ['generic']
+                parent = template.get('inherits', None)
+                while True:
+                    if parent and parent not in parents:
+                        parents.append(parent)
+                        parent = data.get(parent).get('inherits', None)
+                    else:
+                        break
+                for parent in reversed(parents):
+                    parent_attrs = data.get(parent).get('default')
+                    attrs = dict_merge(parent_attrs, attrs)
+                limits = attrs.pop('limits', None)
+                expanded[type].update({name: Template(name, desc, limits, attrs)})
+        return expanded
 
     def types(self):
         """Return available object types."""
         return sorted(self.keys())
 
-    def templates(type):
-        """Return all templates for a particular object."""
-        return self.get(type, None)
+    def list(self, type):
+        """List available object types."""
+        return sorted(self.get(type).keys()) or None
+
+    def desc(self, type, name):
+        return self.get(type).get(name).desc
+
 
 if __name__ == "__main__":
-    objs = Objects()
-    for type, templates in objs.items():
+    tmpl = Templates()
+    for t in tmpl.types(): print t, tmpl.list(t)
+    for type, templates in tmpl.items():
         print "Object type: {}".format(type)
         for name, template in templates.items():
-            print "  {:<10}: {:<30}".format(name, template.get('desc'))
+            print "  {:<10}: {:<30}".format(name, template.desc)
