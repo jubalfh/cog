@@ -232,7 +232,8 @@ def show(ctx, **args):
     names = args.get('uid')
     tree = dir.Tree()
     query = '(&(objectClass=*)(%s=%s))'
-    attrs = ['uid', 'cn', 'gecos', 'mail', 'title', 'o', 'uidNumber', 'gidNumber']
+    attrs = ['uid', 'cn', 'gecos', 'mail', 'telephoneNumber', 'title',
+            'o', 'uidNumber', 'gidNumber']
     if args.get('verbose'):
         attrs += ['objectClass', 'memberOf', 'loginShell', 'homeDirectory',
                   'modifiersName', 'modifyTimestamp', 'sshPublicKey']
