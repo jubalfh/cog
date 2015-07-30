@@ -12,6 +12,7 @@ import os
 import sys
 import re
 import yaml
+from sshpubkeys import SSHKey
 
 from cog.util.misc import dict_merge, loop_on
 
