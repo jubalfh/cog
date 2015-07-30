@@ -19,13 +19,14 @@ import ldap.modlist as modlist
 
 import cog.directory as dir
 import cog.util.passwd as passwd
+from cog.util.misc import loop_on
 from cog.objects.group import Group
 from cog.config.settings import Profiles
-from cog.config.templates import Objects
+from cog.config.templates import Templates
 
 
-accounts = Objects().templates('account')
-settings = Profiles().current()
+accounts = Templates().get('accounts')
+settings = Profiles()
 
 class User(object):
     def __init__(self, name, account_data=None, groups=None, bind=False):
@@ -35,8 +36,8 @@ class User(object):
         self.tree = dir.Tree()
         self.name = name
         self.exists = True
-        self.base_dn = settings.get('user_dn')
-        self.ldap_query = settings.get('user_query') % (settings.get('user_rdn'), self.name)
+        self.base_dn = settings.user_dn
+        self.ldap_query = settings.user_query % (settings.user_rdn, self.name)
         user_data = self.tree.search(self.base_dn, search_filter=self.ldap_query, bind=bind)
         if len(user_data) > 1:
             raise dir.MultipleObjectsFound("The user ID is not unique.")
@@ -88,8 +89,9 @@ class User(object):
 
     @user_exists
     def find_groups(self):
-        for uid in self.uid:
-            groups = [x['cn'][0] for x in self.tree.search(search_filter='(&(objectClass=posixGroup)(memberUid=%s))' % uid, attributes=['cn'])]
+        for uid in loop_on(self.uid):
+            group_filter = '(&(objectClass=posixGroup)(|(memberUid=%s)(%s=%s)))' % (uid, settings.rfc2307bis_group_member_attribute, self.data.dn)
+            groups = [x['cn'][0] for x in self.tree.search(search_filter=group_filter, attributes=['cn'])]
             yield groups
 
     @user_exists
@@ -123,7 +125,7 @@ class User(object):
     @user_exists
     def rename(self, new_name):
         self.tree.rename(self.data.dn, new_rdn='%s=%s'
-                         % (settings.get('user_rdn'), new_name))
+                         % (settings.user_rdn, new_name))
 
     @user_exists
     def remove(self):
