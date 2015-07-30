@@ -13,7 +13,7 @@ from functools import wraps
 from cog.config.settings import Profiles
 
 
-settings = Profiles().current()
+settings = Profiles()
 
 
 def make_triple(host, uid, domain):
@@ -24,8 +24,8 @@ class Netgroup(object):
     def __init__(self, netgroupname, netgroup_data=None):
         self.tree = dir.Tree()
         self.netgroupname = netgroupname
-        self.base_dn = settings.get('group_dn')
-        self.ldap_query = settings.get('netgroup_query') % (self.netgroupname)
+        self.base_dn = settings.group_dn
+        self.ldap_query = settings.netgroup_query % (self.netgroupname)
         self.exists = True
         netgroups = self.tree.search(self.base_dn, search_filter=self.ldap_query)
         if len(netgroups) > 1:
@@ -35,7 +35,6 @@ class Netgroup(object):
         else:
             self.exists = False
             self.data = netgroup_data
-        print self.data
 
     def netgroup_exists(method):
         """
@@ -61,8 +60,8 @@ class Netgroup(object):
         self.data.replace('description', description)
 
     @netgroup_exists
-    def rename(self, new_netgroupname):
-        self.tree.rename(self.dn, new_netgroupname)
+    def rename(self, new_name):
+        self.tree.rename(self.data.dn, new_rdn='cn=%s' % new_name)
 
     @netgroup_exists
     def remove(self):
