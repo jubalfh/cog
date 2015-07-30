@@ -35,20 +35,20 @@ defaults = {
     'max_gidnumber': 1000000,
     'rfc2307bis_group_object_class': 'groupOfMembers',
     'rfc2307bis_group_member_attribute': 'member',
-    'rfc2307bis_group_sync_attributes': True,
+    'use_memberuid': True,
 }
 
 
-class Profiles(dict):
+class Profiles(object):
     __metaclass__ = Singleton
 
     def __init__(self, user_config=True):
-        super(self.__class__, self).__init__({})
 
         progpath = dirname(sys.argv[0])
 
         self.progname = 'cog'
         self.profiles = dict()
+        self.store = dict()
         self.cfg_dirs = [pathjoin(dirname(progpath), 'etc', self.progname)]
         if user_config:
             self.cfg_dirs.append(get_app_dir(self.progname, force_posix=True))
@@ -56,17 +56,27 @@ class Profiles(dict):
                           for cfg_dir in self.cfg_dirs if isdir(cfg_dir)]
 
         self.profiles = merge_data(*self.cfg_files)
-        self.profile = self.profiles.pop('profile')
+        self.current = self.profiles.pop('profile')
+        for name, profile in self.profiles.items():
+            self.profiles[name] = dict_merge(defaults, profile)
+        self.use(self.current)
+
+    def __getattr__(self, key):
+        return self.store.get(key, None)
 
     def list(self):
         return self.profiles.keys()
 
-    def current(self, name=None):
-        return dict_merge(defaults, self.profiles.get(name or self.profile))
-
     def use(self, name):
         if name in self.list():
-            self.profile = name
+            self.current = name
+            self.store = self.profiles.get(self.current)
+
 
 if __name__ == "__main__":
-    pprint(Profiles().current())
+    a = Profiles()
+    pprint(a.description)
+    b = Profiles()
+    b.use('test')
+    pprint(a.description)
+    pprint(b.description)
