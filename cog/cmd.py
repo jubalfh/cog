@@ -6,15 +6,18 @@
 # the cog project is free software under 3-clause BSD licence
 # see the LICENCE file in the project root for copying terms
 
+
 import os
 import sys
 import click
-from cog.util import loop_on, to_utf8
-#from cog.config import Profiles, make_user_config
+from pprint import pprint
+from cog.util.misc import loop_on, to_utf8
+from cog.config.settings import Profiles
 
 
-CONTEXT = dict()
+CONTEXT = dict(auto_envvar_prefix='COG_')
 cmd_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cli')
+settings = Profiles()
 
 
 def prep_args(f):
@@ -30,6 +33,7 @@ def prep_args(f):
             else:
                 d[k] = to_utf8(v)
         return d
+
     def _prep_args(*ctx, **args):
         args = _cleanup(args)
         return(f(*ctx, **args))
@@ -52,6 +56,7 @@ class Context(object):
 
 pass_context = click.make_pass_decorator(Context, ensure=True)
 
+
 class CogCLI(click.MultiCommand):
 
     def list_commands(self, ctx):
@@ -72,9 +77,14 @@ class CogCLI(click.MultiCommand):
 
 
 @click.command(cls=CogCLI, context_settings=CONTEXT)
+@click.option('-p', '--profile', 'profile', type=click.Choice(settings.list()),
+              help="connection profile")
 @pass_context
-def cli(ctx):
-    """cog, a flexible directory manager"""
+def cli(ctx, profile):
+    """cog, a flexible manager for modestly-sized LDAP directories"""
+    if profile:
+        settings.use(profile)
+
 
 if __name__ == '__main__':
     cli()
