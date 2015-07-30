@@ -1,7 +1,13 @@
 Changelog
 =========
 
-= release 1.99x =
+# release 2.0 #
+
+* user-visible changes:
+  *  better command line handling
+  *  full support for running in a virtualenv
+  *  support for transparent store of passwords in system keyrings
+     (through python-keyring)
 
 * command line options are now being handled by the excellent click
   framework instead of half-arsed hack,
@@ -10,13 +16,9 @@ Changelog
   partly rewritten and made more resilient (the config/settings
   specifically)
 
-* user-visible changes: -h is not a shortcut for --help anymore
-
-* first attempts at unfucking uidnumber/gidnumber tests.
-
 * remove user_config option (user config is now mandatory).
 
-= release 1.3 =
+# release 1.3 #
 
 * cog now helps managing SSH public keys if your directory supports the
   openssh-lpk schema:
