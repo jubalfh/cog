@@ -74,14 +74,15 @@ def cli(ctx):
 @prep_args
 def add(ctx, **args):
     """Adds new user to the directory."""
-    accountType = args.pop('accountType')
-    user_data = dict_merge(accounts.get(accountType), args)
+    account_type = args.pop('accountType')
+    user_group = args.pop('userGroup', settings.usergroups)
+    user_data = dict_merge(accounts.get(account_type), args)
     name = user_data.pop('uid')
     user_data[user_rdn] = name
     path = user_data.pop('path', None)
     groups = user_data.pop('group', None)
     requires = user_data.pop('requires', None)
-    dn = "%s=%s,%s" % (user_rdn, name, dir.get_account_base(accountType))
+    dn = "%s=%s,%s" % (user_rdn, name, dir.get_account_base(account_type))
     operator_uid = get_current_uid()
     for nameattr in ['cn', 'sn', 'givenName']:
         if not user_data.get(nameattr) and nameattr in requires:
