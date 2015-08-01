@@ -101,6 +101,7 @@ def add(ctx, **args):
         group_dn = "cn=%s,%s" % (name, dir.get_group_base(group_type))
         group_id = dir.get_probably_unique_gidnumber()
         group_data = {
+            'objectClass': ['posixGroup', 'top'],
             'cn': name,
             'description': 'Personal group for %s.' % name,
             'gidNumber': group_id}
