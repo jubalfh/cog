@@ -17,8 +17,10 @@ from cog.cmd import CogCLI, prep_args, pass_context
 from cog.util.io import read_ssh_keys
 from cog.util.misc import get_current_uid, loop_on, dict_merge, flatten
 from cog.objects.user import User
+from cog.objects.group import Group
 
 accounts = Templates().get('accounts')
+groups = Templates().get('groups')
 
 settings = Profiles()
 user_rdn = settings.user_rdn
@@ -44,6 +46,8 @@ def cli(ctx):
         metavar="[gid]", help="primary group id")
 @click.option("-G", "--add-group", "group", multiple=True,
         metavar="[group name]", help="user's secondary group")
+@click.option("-U", "--add-usergroup", "userGroup", is_flag=True,
+        help="create dedicated user group")
 # account & password details
 @click.option("-p", "--password", "userPassword", is_flag=True,
         help="generate password for new user")
@@ -93,6 +97,21 @@ def add(ctx, **args):
         ssh_key = read_ssh_keys(user_data.pop('sshpublickey'))
         user_data['sshPublicKey'] = ssh_key
         user_data['objectClass'].append('ldapPublicKey')
+    if user_group:
+        group_type = account_type if account_type in groups else 'generic'
+        group_dn = "cn=%s,%s" % (name, dir.get_group_base(group_type))
+        group_id = dir.get_probably_unique_gidnumber()
+        group_data = {
+            'cn': name,
+            'description': 'Personal group for %s.' % name,
+            'gidNumber': group_id}
+        group_entry = dir.Entry(dn=group_dn, attrs=group_data)
+        user_data['gidNumber'] = group_id
+        try:
+            newgroup = Group(name, group_entry)
+            newgroup.add()
+        except:
+            print "There was a problem with creating user group %s." % name
     user_entry = dir.Entry(dn=dn, attrs=user_data)
     newuser = User(name, user_entry, groups=groups)
     newuser.add()
