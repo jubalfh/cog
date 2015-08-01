@@ -80,7 +80,7 @@ def add(ctx, **args):
     name = user_data.pop('uid')
     user_data[user_rdn] = name
     path = user_data.pop('path', None)
-    groups = user_data.pop('group', None)
+    secondary_groups = user_data.pop('group', None)
     requires = user_data.pop('requires', None)
     dn = "%s=%s,%s" % (user_rdn, name, dir.get_account_base(account_type))
     operator_uid = get_current_uid()
@@ -112,7 +112,7 @@ def add(ctx, **args):
         except:
             print "There was a problem with creating user group %s." % name
     user_entry = dir.Entry(dn=dn, attrs=user_data)
-    newuser = User(name, user_entry, groups=groups)
+    newuser = User(name, user_entry, groups=secondary_groups)
     newuser.add()
 
 
