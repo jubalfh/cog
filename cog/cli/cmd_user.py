@@ -49,8 +49,6 @@ def cli(ctx):
 @click.option("-U", "--add-usergroup", "userGroup", is_flag=True,
         help="create dedicated user group")
 # account & password details
-@click.option("-p", "--password", "userPassword", is_flag=True,
-        help="generate password for new user")
 @click.option("-d", "--home", "homeDirectory",
         metavar="[path]", help="path to home directory")
 @click.option("-s", "--shell", "loginShell",
