@@ -37,6 +37,7 @@ defaults = {
     'rfc2307bis_group_object_class': 'groupOfMembers',
     'rfc2307bis_group_member_attribute': 'member',
     'use_memberuid': True,
+    'usergroups': False,
 }
 
 
