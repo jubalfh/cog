@@ -121,13 +121,13 @@ def add(ctx, **args):
 # argument(s)
 @click.argument("uid", metavar="[user name]", required=1)
 # uid and group management
-@click.option("--uid-number", "uidNumber", metavar="[uid]",
+@click.option("-u", "--uid-number", "uidNumber", metavar="[uid]",
         help="change user id [numerical]")
-@click.option("--group-id", "gidNumber", metavar="[gid]",
+@click.option("-g", "--group-id", "gidNumber", metavar="[gid]",
         help="change primary group id")
-@click.option("--add-group", "addgroup", multiple=True,
+@click.option("-G", "--add-group", "addgroup", multiple=True,
         metavar="[group name]", help="[add user to the group]")
-@click.option("--del-group", "delgroup", multiple=True,
+@click.option("-D", "--del-group", "delgroup", multiple=True,
         metavar="[group name]", help="[remove user from the group]")
 # account & password management
 @click.option("-r", "--reset-password", "resetPassword", is_flag=True,
@@ -139,7 +139,7 @@ def add(ctx, **args):
 @click.option("-c", "--gecos", "gecos",
         metavar="[freeform text]", help="the GECOS field")
 # personal information management
-@click.option("--full-name", "cn", help="[new full name]")
+@click.option("-F", "--full-name", "cn", help="[new full name]")
 @click.option("--first-name", "givenName", 
         metavar="[freeform text]", help="new first name")
 @click.option("--last-name", "sn",
