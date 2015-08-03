@@ -70,14 +70,15 @@ def dict_merge(d1, d2):
     Merge two dictionaries recursively. Merge the lists embedded within
     dictionary at the same positions too (with caveats).
     """
+    result = dict(d2)
     for k1, v1 in d1.items():
-        if k1 not in d2:
-            d2[k1] = v1
+        if k1 not in result:
+            result[k1] = v1
         elif isinstance(v1, list):
-            d2[k1] = list(set(d2[k1] + v1))
+            result[k1] = list(set(d2[k1] + v1))
         elif isinstance(v1, dict):
-            dict_merge(v1, d2[k1])
-    return d2
+            result[k1] = dict_merge(v1, d2[k1])
+    return result
 
 
 def apply_to(d, f):
