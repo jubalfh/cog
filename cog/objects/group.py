@@ -33,7 +33,6 @@ class Group(object):
         self.ldap_query = settings.group_query % (self.gid)
         self.exists = True
         if has_rfc2307bis():
-            print has_rfc2307bis()
             self.rfc2307bis = True
         else:
             settings.use_memberuid = True
