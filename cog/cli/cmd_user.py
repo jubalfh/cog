@@ -9,6 +9,8 @@
 import sys
 import yaml
 import click
+import ldap
+import traceback
 import cog.directory as dir
 import cog.util.passwd as passwd
 from cog.config.settings import Profiles
@@ -81,7 +83,7 @@ def add(ctx, **args):
     user_data[user_rdn] = name
     path = user_data.pop('path', None)
     secondary_groups = user_data.pop('group', None)
-    requires = user_data.pop('requires', None)
+    requires = user_data.pop('requires', [])
     dn = "%s=%s,%s" % (user_rdn, name, dir.get_account_base(account_type))
     operator_uid = get_current_uid()
     for nameattr in ['cn', 'sn', 'givenName']:
@@ -110,8 +112,8 @@ def add(ctx, **args):
         try:
             newgroup = Group(name, group_entry)
             newgroup.add()
-        except:
-            print "There was a problem with creating user group %s." % name
+        except ldap.LDAPError as e:
+            print "A problem occured when creating user group %s – group hasn't been created." % name
     user_entry = dir.Entry(dn=dn, attrs=user_data)
     newuser = User(name, user_entry, groups=secondary_groups)
     newuser.add()
