@@ -42,12 +42,10 @@ def add(ctx, **args):
     """add a netgroup"""
     type = args.pop('nisNetgroupType')
     data = dict_merge(netgroups.get(type), args)
-    path = data.pop('path', None)
     cn = data.get('cn')
     path = data.pop('path', None)
     requires = data.pop('requires', None)
     dn = "cn=%s,%s" % (cn, dir.get_netgroup_base(type))
-    print dn
     netgroup_entry = dir.Entry(dn=dn, attrs=data)
     newnetgroup = Netgroup(cn, netgroup_entry)
     newnetgroup.add()

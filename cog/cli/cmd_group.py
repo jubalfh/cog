@@ -26,6 +26,7 @@ groups = Templates().get('groups')
 def cli(ctx):
     """group management"""
 
+
 @cli.command(name="add", help="add a group to the directory")
 @click.argument("cn", metavar="[group name]")
 @click.option("-t", "--type", "groupType", default="generic",

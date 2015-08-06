@@ -74,7 +74,7 @@ class Profiles(object):
             os.makedirs(pathjoin(appdir, 'templates.d'), mode=0750)
             shutil.copyfile(
                 pathjoin(self.cfg_dirs[0], 'examples/settings.local'),
-                pathjoin( appdir, 'settings'))
+                pathjoin(appdir, 'settings'))
 
     def list(self):
         return self.profiles.keys()
