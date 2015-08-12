@@ -1,6 +1,20 @@
 Changelog
 =========
 
+# release 2.1 #
+
+* Mostly bugfix release.
+
+* user-visible changes:
+  *  support for creating per-user groups at account creation time,
+     (`cog user add -U/--add-user-group` will create one and there is
+     new global config option: `usergroups`),
+  *  added short options for `cog user edit`,
+  *  remove a no-op `--password` option from `cog user add` (use `cog
+     user edit -r` to reset it afterwards),
+
+* a bunch of brown paper bag errors eradicated
+
 # release 2.0 #
 
 * user-visible changes:

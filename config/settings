@@ -24,11 +24,15 @@ local:
   # These are the built-in defaults that cog comes with, see
   # cog/config/settings.py
 
+  # support for creating per-user groups at account creation time, see
+  # also ‘cog user add -U’ which overrides global settings
+  # usergroups: False
+
   # uid/gid limits, can be overridden in templates
-  # min_uidnumber': '420000'
-  # max_uidnumber': '1000000'
-  # min_gidnumber': '420000'
-  # max_gidnumber': '1000000'
+  # min_uidnumber: 420000
+  # max_uidnumber: 1000000
+  # min_gidnumber: 420000
+  # max_gidnumber: 1000000
 
   # advanced settings below: change at your own peril
 
@@ -41,4 +45,3 @@ local:
   # rfc2307bis_group_object_class': 'groupOfMembers'
   # rfc2307bis_group_member_attribute': 'member'
   # use_memberuid': true
-
