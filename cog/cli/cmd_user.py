@@ -9,6 +9,8 @@
 import sys
 import yaml
 import click
+import ldap
+import traceback
 import cog.directory as dir
 import cog.util.passwd as passwd
 from cog.config.settings import Profiles
@@ -17,8 +19,10 @@ from cog.cmd import CogCLI, prep_args, pass_context
 from cog.util.io import read_ssh_keys
 from cog.util.misc import get_current_uid, loop_on, dict_merge, flatten
 from cog.objects.user import User
+from cog.objects.group import Group
 
 accounts = Templates().get('accounts')
+groups = Templates().get('groups')
 
 settings = Profiles()
 user_rdn = settings.user_rdn
@@ -44,9 +48,9 @@ def cli(ctx):
         metavar="[gid]", help="primary group id")
 @click.option("-G", "--add-group", "group", multiple=True,
         metavar="[group name]", help="user's secondary group")
+@click.option("-U", "--add-usergroup", "userGroup", is_flag=True,
+        help="create dedicated user group")
 # account & password details
-@click.option("-p", "--password", "userPassword", is_flag=True,
-        help="generate password for new user")
 @click.option("-d", "--home", "homeDirectory",
         metavar="[path]", help="path to home directory")
 @click.option("-s", "--shell", "loginShell",
@@ -72,14 +76,15 @@ def cli(ctx):
 @prep_args
 def add(ctx, **args):
     """Adds new user to the directory."""
-    accountType = args.pop('accountType')
-    user_data = dict_merge(accounts.get(accountType), args)
+    account_type = args.pop('accountType')
+    user_group = args.pop('userGroup', settings.usergroups)
+    user_data = dict_merge(accounts.get(account_type), args)
     name = user_data.pop('uid')
     user_data[user_rdn] = name
     path = user_data.pop('path', None)
-    groups = user_data.pop('group', None)
-    requires = user_data.pop('requires', None)
-    dn = "%s=%s,%s" % (user_rdn, name, dir.get_account_base(accountType))
+    secondary_groups = user_data.pop('group', None)
+    requires = user_data.pop('requires', [])
+    dn = "%s=%s,%s" % (user_rdn, name, dir.get_account_base(account_type))
     operator_uid = get_current_uid()
     for nameattr in ['cn', 'sn', 'givenName']:
         if not user_data.get(nameattr) and nameattr in requires:
@@ -93,8 +98,24 @@ def add(ctx, **args):
         ssh_key = read_ssh_keys(user_data.pop('sshpublickey'))
         user_data['sshPublicKey'] = ssh_key
         user_data['objectClass'].append('ldapPublicKey')
+    if user_group:
+        group_type = account_type if account_type in groups else 'generic'
+        group_dn = "cn=%s,%s" % (name, dir.get_group_base(group_type))
+        group_id = dir.get_probably_unique_gidnumber()
+        group_data = {
+            'objectClass': ['posixGroup', 'top'],
+            'cn': name,
+            'description': 'Personal group for %s.' % name,
+            'gidNumber': group_id}
+        group_entry = dir.Entry(dn=group_dn, attrs=group_data)
+        user_data['gidNumber'] = group_id
+        try:
+            newgroup = Group(name, group_entry)
+            newgroup.add()
+        except ldap.LDAPError as e:
+            print "A problem occured when creating user group %s – group hasn't been created." % name
     user_entry = dir.Entry(dn=dn, attrs=user_data)
-    newuser = User(name, user_entry, groups=groups)
+    newuser = User(name, user_entry, groups=secondary_groups)
     newuser.add()
 
 
@@ -103,13 +124,13 @@ def add(ctx, **args):
 # argument(s)
 @click.argument("uid", metavar="[user name]", required=1)
 # uid and group management
-@click.option("--uid-number", "uidNumber", metavar="[uid]",
+@click.option("-u", "--uid-number", "uidNumber", metavar="[uid]",
         help="change user id [numerical]")
-@click.option("--group-id", "gidNumber", metavar="[gid]",
+@click.option("-g", "--group-id", "gidNumber", metavar="[gid]",
         help="change primary group id")
-@click.option("--add-group", "addgroup", multiple=True,
+@click.option("-G", "--add-group", "addgroup", multiple=True,
         metavar="[group name]", help="[add user to the group]")
-@click.option("--del-group", "delgroup", multiple=True,
+@click.option("-D", "--del-group", "delgroup", multiple=True,
         metavar="[group name]", help="[remove user from the group]")
 # account & password management
 @click.option("-r", "--reset-password", "resetPassword", is_flag=True,
@@ -121,7 +142,7 @@ def add(ctx, **args):
 @click.option("-c", "--gecos", "gecos",
         metavar="[freeform text]", help="the GECOS field")
 # personal information management
-@click.option("--full-name", "cn", help="[new full name]")
+@click.option("-F", "--full-name", "cn", help="[new full name]")
 @click.option("--first-name", "givenName", 
         metavar="[freeform text]", help="new first name")
 @click.option("--last-name", "sn",
@@ -232,7 +253,8 @@ def show(ctx, **args):
     names = args.get('uid')
     tree = dir.Tree()
     query = '(&(objectClass=*)(%s=%s))'
-    attrs = ['uid', 'cn', 'gecos', 'mail', 'title', 'o', 'uidNumber', 'gidNumber']
+    attrs = ['uid', 'cn', 'gecos', 'mail', 'telephoneNumber', 'title',
+            'o', 'uidNumber', 'gidNumber']
     if args.get('verbose'):
         attrs += ['objectClass', 'memberOf', 'loginShell', 'homeDirectory',
                   'modifiersName', 'modifyTimestamp', 'sshPublicKey']

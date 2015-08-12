@@ -23,7 +23,6 @@ from cog.directory import has_rfc2307bis
 settings = Profiles()
 rfc2307bis_object_class = settings.rfc2307bis_group_object_class
 rfc2307bis_member_attribute = settings.rfc2307bis_group_member_attribute
-rfc2307bis = True
 
 
 class Group(object):
@@ -34,10 +33,10 @@ class Group(object):
         self.ldap_query = settings.group_query % (self.gid)
         self.exists = True
         if has_rfc2307bis():
-            rfc2307bis = True
+            self.rfc2307bis = True
         else:
             settings.use_memberuid = True
-            rfc2307bis = False
+            self.rfc2307bis = False
         groups = self.tree.search(self.base_dn, search_filter=self.ldap_query)
         if len(groups) > 1:
             raise dir.MultipleObjectsFound
@@ -59,7 +58,7 @@ class Group(object):
         return _group_exists
 
     def add(self):
-        if rfc2307bis:
+        if self.rfc2307bis:
             self.data.append('objectClass', rfc2307bis_object_class)
         self.tree.add(self.data)
         self.exists = True
@@ -83,7 +82,7 @@ class Group(object):
             if settings.use_memberuid and ('memberUid' not in self.data or
                     uid not in self.data['memberUid']):
                 self.data.append('memberUid', uid)
-            if rfc2307bis:
+            if self.rfc2307bis:
                 uid_dn = dir.find_dn_for_uid(uid)
                 if not uid_dn:
                     raise dir.ObjectNotFound("User object not found.")
@@ -96,7 +95,7 @@ class Group(object):
         for uid in loop_on(uids):
             if settings.use_memberuid:
                 self.data.remove('memberUid', uid)
-            if rfc2307bis:
+            if self.rfc2307bis:
                 uid_dn = dir.find_dn_for_uid(uid)
                 if not uid_dn:
                     raise dir.ObjectNotFound("User object not found.")

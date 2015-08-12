@@ -37,6 +37,7 @@ defaults = {
     'rfc2307bis_group_object_class': 'groupOfMembers',
     'rfc2307bis_group_member_attribute': 'member',
     'use_memberuid': True,
+    'usergroups': False,
 }
 
 
@@ -73,7 +74,7 @@ class Profiles(object):
             os.makedirs(pathjoin(appdir, 'templates.d'), mode=0750)
             shutil.copyfile(
                 pathjoin(self.cfg_dirs[0], 'examples/settings.local'),
-                pathjoin( appdir, 'settings'))
+                pathjoin(appdir, 'settings'))
 
     def list(self):
         return self.profiles.keys()

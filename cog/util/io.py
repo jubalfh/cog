@@ -16,12 +16,12 @@ from sshpubkeys import SSHKey
 
 from cog.util.misc import dict_merge, loop_on
 
-def list_files(path, ext='.yaml'):
+def list_files(path):
     """Given a directory, list all files with specified extension."""
     try:
         for entry in os.listdir(path):
             file_path = os.path.join(path, entry)
-            if os.path.isfile(file_path) and file_path.endswith(ext):
+            if os.path.isfile(file_path):
                 yield file_path
     except OSError:
         pass

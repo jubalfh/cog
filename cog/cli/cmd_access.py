@@ -144,12 +144,12 @@ def show(ctx, **args):
                     print '%s at %s: %s' % (access_levels[priv_level], access_object, ', '.join(users))
     elif args.get('query_type') == 'user':
         uids = args.get('query')
-        access_list = dict((k, { key: set([]) for key in access_levels.keys() }) for k in uids)
+        access_list = dict((k, {key: set([]) for key in access_levels.keys()}) for k in uids)
         query_uids = ''.join(['(nisNetgroupTriple=*,%s,*)' % uid for uid in uids])
         if len(uids) > 1:
             query_uids = '(|' + query_uids + ')'
         query = '(&(objectClass=nisNetgroup)(cn=*-*)%s)' % query_uids
-        for netgroup_entry in tree.search(search_filter = query, attributes=['cn', 'nisNetgroupTriple']):
+        for netgroup_entry in tree.search(search_filter=query, attributes=['cn', 'nisNetgroupTriple']):
             access_object, priv_level = netgroup_entry.get('cn')[0].rsplit('-', 1)
             access_uids = [x.strip('(-,)') for x in netgroup_entry.get('nisNetgroupTriple')]
             for uid in uids:

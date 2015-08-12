@@ -64,7 +64,7 @@ class CogCLI(click.MultiCommand):
         for filename in os.listdir(cmd_folder):
             if filename.endswith('.py') and filename.startswith('cmd_'):
                 commands.append(filename[4:-3])
-        commands.sort
+        commands.sort()
         return commands
 
     def get_command(self, ctx, name):
