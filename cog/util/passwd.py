@@ -15,12 +15,15 @@ import getpass
 from passlib.hash import sha512_crypt
 
 
+rnd = random.SystemRandom()
+
+
 # password & system helpers
 def random_string(size=32, chars=string.letters + string.digits + string.punctuation):
     """
     Generate randomized string using reasonably wide set of ASCII characters.
     """
-    return ''.join(random.choice(chars) for x in range(size))
+    return ''.join(rnd.choice(chars) for x in range(size))
 
 
 def make_sha512(passwd=None):
@@ -31,7 +34,7 @@ def make_sha512(passwd=None):
     if passwd is None:
         passwd = random_string(17)
     salt = random_string(16, ('./' + string.letters + string.digits))
-    iterations = random.randint(40000, 80000)
+    iterations = rnd.randint(40000, 80000)
     return '{CRYPT}' + sha512_crypt.encrypt(passwd, salt=salt, rounds=iterations)
 
 
