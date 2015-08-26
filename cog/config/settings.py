@@ -13,6 +13,7 @@ import sys
 import shutil
 
 from pprint import pprint
+from glob import iglob as glob
 from click import get_app_dir
 from os.path import join as pathjoin, dirname, isdir
 from cog.util.io import merge_data
@@ -75,6 +76,10 @@ class Profiles(object):
             shutil.copyfile(
                 pathjoin(self.cfg_dirs[0], 'examples/settings.local'),
                 pathjoin(appdir, 'settings'))
+            for template in glob(pathjoin(self.cfg_dirs[0],
+                                  'examples/templates/*')):
+                shutil.copy(template, pathjoin(appdir, 'templates.d/'))
+
 
     def list(self):
         return self.profiles.keys()
