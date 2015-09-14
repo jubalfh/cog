@@ -23,6 +23,7 @@ from cog.util.misc import dict_merge, Singleton
 defaults = {
     'ldap_uri': 'ldap://ldap/',
     'ldap_encryption': True,
+    'ldapi_path': '/usr/local/openldap/var/run/ldapi',
     'bind_dn': None,
     'bind_pass': None,
     'keyring_service': 'org.makabra.cog',

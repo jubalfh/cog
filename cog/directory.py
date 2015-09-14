@@ -12,12 +12,14 @@ import time
 import ldif
 import ldap
 import ldap.dn
+import ldap.sasl
 import ldap.schema
 import ldap.modlist as modlist
 import cog.util.passwd as passwd
 
 from pprint import pprint
 from functools import wraps
+from ldapurl import ldapUrlEscape as ldap_uri_escape
 from StringIO import StringIO
 from cog.cidict import cidict
 from cog.util.misc import get_current_uid, loop_on, Singleton
@@ -176,6 +178,10 @@ class Tree(object):
         self.ldap_encryption = settings.ldap_encryption
         self.ldap_uri = settings.ldap_uri
         self.bound = False
+        self._bind = self._simple_bind
+        if self.ldap_uri.startswith('ldapi'):
+            self.ldap_uri = 'ldapi://%s/' % ldap_uri_escape(settings.ldapi_path)
+            self._bind = self._sasl_bind
         self._connect()
         return
 
@@ -193,7 +199,7 @@ class Tree(object):
             self.ldap_handle.set_option(ldap.OPT_X_TLS_NEWCTX, 0)
             self.ldap_handle.start_tls_s()
 
-    def _bind(self):
+    def _simple_bind(self):
         """
         Make non-anonymous directory bind. (And let the python-ldap implementation
         handle the fallout.)
@@ -208,6 +214,14 @@ class Tree(object):
                                               use_keyring=settings.use_keyring)
                 self._reconnect()
             self.ldap_handle.simple_bind_s(self.bind_dn, self.bind_pass)
+            self.bound = True
+
+    def _sasl_bind(self):
+        """
+        Make non-anonymous directory bind using SASL EXTERNAL mechanism.
+        """
+        if not self.bound:
+            self.ldap_handle.sasl_interactive_bind_s('', ldap.sasl.external())
             self.bound = True
 
     def _is_connected(self):
