@@ -221,7 +221,7 @@ class Tree(object):
         Make non-anonymous directory bind using SASL EXTERNAL mechanism.
         """
         if not self.bound:
-            self.ldap_handle.sasl_interactive_bind_s('', ldap.sasl.external())
+            self.ldap_handle.sasl_external_bind_s()
             self.bound = True
 
     def _is_connected(self):
